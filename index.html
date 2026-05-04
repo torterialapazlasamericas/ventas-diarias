@@ -207,7 +207,7 @@
 </div>
 
 <script>
-  const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbzJBlL7BE71JvjZlh_5J09fDP8AGoeW5L3PKqHWkCNZ2fG45fnMi924lXaE6DZ2inbv/exec";
+  const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbxEsha2pVjkzmAgb2qJpWJFHDLIM8aoqeC5FjmO6rb2K9peYbuw0hEqmgRjTjqCTHhi/exec";
   const COMISION_TARJETA = 0.035;
   const COMISION_RAPPI   = 0.18;
 
@@ -385,13 +385,13 @@
   // ── Guardar ──────────────────────────────────────────────
   async function confirmarGuardar() {
     if (!datosParaGuardar) return;
+    const d = { ...datosParaGuardar }; // copia local antes de cerrar modal
     cerrarModal();
     const btn = document.getElementById('btn-guardar');
     btn.disabled = true; btn.textContent = 'Guardando...';
     setStatus('');
 
     try {
-      const d = datosParaGuardar;
       const params = new URLSearchParams({
         accion: 'agregar', fecha: d.fecha,
         efectivo: d.efectivo, tarjeta: d.tarjeta,
