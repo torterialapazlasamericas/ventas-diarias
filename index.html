@@ -207,7 +207,7 @@
 </div>
 
 <script>
-  const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbzJK96C2VAV-O2ekhJ8VrW6sRTDLYG7CMk1iLi7Q_OcEoiGFmjCwHnjZboCZ2IMjzns/exec";
+  const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbzJBlL7BE71JvjZlh_5J09fDP8AGoeW5L3PKqHWkCNZ2fG45fnMi924lXaE6DZ2inbv/exec";
   const COMISION_TARJETA = 0.035;
   const COMISION_RAPPI   = 0.18;
 
@@ -254,7 +254,7 @@
   }
 
   function labelFecha(iso) {
-    if (!iso) return '';
+    if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso || '';
     const [y, m, d] = iso.split('-');
     const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
     return `${parseInt(d)} ${meses[parseInt(m)-1]} ${y}`;
@@ -421,13 +421,15 @@
       const res  = await fetch(SCRIPT_URL + '?accion=listar', { method: 'GET' });
       const data = await res.json();
       if (data.ok) {
-        rows = data.datos.map(r => ({
-          fecha:         normFecha(r.fecha),
-          efectivo:      parseFloat(r.efectivo)      || 0,
-          tarjeta:       parseFloat(r.tarjeta)       || 0,
-          transferencia: parseFloat(r.transferencia) || 0,
-          rappi:         parseFloat(r.rappi)         || 0
-        }));
+        rows = data.datos
+          .filter(r => r && r.fecha && /^\d{4}-\d{2}-\d{2}$/.test(normFecha(r.fecha)))
+          .map(r => ({
+            fecha:         normFecha(r.fecha),
+            efectivo:      parseFloat(r.efectivo)      || 0,
+            tarjeta:       parseFloat(r.tarjeta)       || 0,
+            transferencia: parseFloat(r.transferencia) || 0,
+            rappi:         parseFloat(r.rappi)         || 0
+          }));
         render();
         renderResumen();
       } else {
