@@ -8,319 +8,122 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg:        #F7F5F0;
-      --surface:   #FFFFFF;
-      --border:    #E4E1D9;
-      --text:      #1A1916;
-      --muted:     #7A7770;
-      --accent:    #1A6B4A;
-      --accent-bg: #EAF4EE;
-      --blue:      #1B4F8A;
-      --blue-bg:   #EBF2FB;
-      --danger:    #C0392B;
-      --radius:    12px;
-      --shadow:    0 1px 3px rgba(0,0,0,0.06);
+      --bg:       #F7F5F0;
+      --surface:  #FFFFFF;
+      --border:   #E4E1D9;
+      --text:     #1A1916;
+      --muted:    #7A7770;
+      --accent:   #1A6B4A;
+      --acc-bg:   #EAF4EE;
+      --blue:     #1B4F8A;
+      --danger:   #C0392B;
+      --radius:   12px;
+      --shadow:   0 1px 3px rgba(0,0,0,0.06);
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; }
 
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      font-size: 15px;
-    }
-
-    header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 1.25rem 2rem;
-      display: flex;
-      align-items: baseline;
-      gap: 12px;
-    }
-    header h1 {
-      font-family: 'DM Serif Display', serif;
-      font-size: 22px;
-      font-weight: 400;
-      color: var(--text);
-    }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1.25rem 2rem; display: flex; align-items: baseline; gap: 12px; }
+    header h1 { font-family: 'DM Serif Display', serif; font-size: 22px; font-weight: 400; }
     header span { font-size: 13px; color: var(--muted); }
 
-    .layout {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 2rem 1.5rem;
-      display: grid;
-      grid-template-columns: 300px 1fr;
-      gap: 1.5rem;
-      align-items: start;
-    }
+    .layout { max-width: 980px; margin: 0 auto; padding: 2rem 1.5rem; display: grid; grid-template-columns: 290px 1fr; gap: 1.5rem; align-items: start; }
+    @media (max-width: 700px) { .layout { grid-template-columns: 1fr; padding: 1rem; } header { padding: 1rem; } }
 
-    @media (max-width: 680px) {
-      .layout { grid-template-columns: 1fr; padding: 1rem; }
-      header  { padding: 1rem; }
-    }
-
-    /* ── FORM ── */
-    .form-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.5rem;
-      box-shadow: var(--shadow);
-      position: sticky;
-      top: 1.5rem;
-    }
-    .form-card h2 {
-      font-family: 'DM Serif Display', serif;
-      font-size: 17px;
-      font-weight: 400;
-      margin-bottom: 1.25rem;
-    }
-
+    /* FORM */
+    .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow); position: sticky; top: 1.5rem; }
+    .form-card h2 { font-family: 'DM Serif Display', serif; font-size: 17px; font-weight: 400; margin-bottom: 1.25rem; }
     .field { margin-bottom: 1rem; }
-    .field label {
-      display: block;
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 5px;
-    }
-    .field input {
-      width: 100%;
-      padding: 9px 12px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 15px;
-      color: var(--text);
-      background: var(--bg);
-      outline: none;
-      transition: border-color 0.15s;
-    }
+    .field label { display: block; font-size: 12px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 5px; }
+    .field input { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--text); background: var(--bg); outline: none; transition: border-color .15s; }
     .field input:focus { border-color: var(--accent); background: #fff; }
-
-    .btn-primary {
-      width: 100%;
-      padding: 11px;
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      margin-top: 0.5rem;
-      transition: opacity 0.15s, transform 0.1s;
-    }
-    .btn-primary:hover   { opacity: 0.88; }
-    .btn-primary:active  { transform: scale(0.98); }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .status {
-      margin-top: 10px;
-      font-size: 13px;
-      text-align: center;
-      min-height: 18px;
-      color: var(--accent);
-    }
+    .btn-primary { width: 100%; padding: 11px; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; margin-top: .5rem; transition: opacity .15s, transform .1s; }
+    .btn-primary:hover { opacity: .88; }
+    .btn-primary:active { transform: scale(.98); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+    .status { margin-top: 10px; font-size: 13px; text-align: center; min-height: 18px; color: var(--accent); }
     .status.error { color: var(--danger); }
 
-    /* ── MODAL DE CONFIRMACIÓN ── */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.4);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-    }
+    /* MODAL */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 100; align-items: center; justify-content: center; }
     .modal-overlay.visible { display: flex; }
-
-    .modal {
-      background: var(--surface);
-      border-radius: var(--radius);
-      padding: 1.75rem;
-      width: 340px;
-      max-width: 90vw;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-    }
-    .modal h3 {
-      font-family: 'DM Serif Display', serif;
-      font-size: 18px;
-      font-weight: 400;
-      margin-bottom: 1rem;
-    }
-    .modal-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 7px 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 14px;
-    }
+    .modal { background: var(--surface); border-radius: var(--radius); padding: 1.75rem; width: 340px; max-width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,.18); }
+    .modal h3 { font-family: 'DM Serif Display', serif; font-size: 18px; font-weight: 400; margin-bottom: 1rem; }
+    .modal-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
     .modal-row:last-of-type { border-bottom: none; }
-    .modal-row .mlabel { color: var(--muted); }
-    .modal-row .mval   { font-weight: 500; }
-    .modal-total {
-      margin-top: 1rem;
-      padding: 10px 14px;
-      background: var(--accent-bg);
-      border-radius: 8px;
-      display: flex;
-      justify-content: space-between;
-      font-size: 15px;
-    }
+    .modal-row .ml { color: var(--muted); }
+    .modal-row .mv { font-weight: 500; }
+    .modal-total { margin-top: 1rem; padding: 10px 14px; background: var(--acc-bg); border-radius: 8px; display: flex; justify-content: space-between; font-size: 15px; }
     .modal-total span:last-child { font-weight: 500; color: var(--accent); }
-
-    .modal-btns {
-      display: flex;
-      gap: 10px;
-      margin-top: 1.25rem;
-    }
-    .btn-cancel {
-      flex: 1;
-      padding: 10px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: transparent;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-      cursor: pointer;
-      color: var(--muted);
-      transition: background 0.15s;
-    }
+    .modal-btns { display: flex; gap: 10px; margin-top: 1.25rem; }
+    .btn-cancel { flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: transparent; font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; color: var(--muted); }
     .btn-cancel:hover { background: var(--bg); }
-    .btn-confirm {
-      flex: 2;
-      padding: 10px;
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: opacity 0.15s;
-    }
-    .btn-confirm:hover { opacity: 0.88; }
+    .btn-confirm { flex: 2; padding: 10px; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; }
+    .btn-confirm:hover { opacity: .88; }
 
-    /* ── RIGHT PANEL ── */
+    /* RIGHT PANEL */
     .right-panel { display: flex; flex-direction: column; gap: 1.25rem; }
 
-    .metrics {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-    }
-    .metric {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1rem 1.1rem;
-      box-shadow: var(--shadow);
-    }
-    .metric .mlabel {
-      font-size: 11px; font-weight: 500;
-      text-transform: uppercase; letter-spacing: 0.05em;
-      color: var(--muted); margin-bottom: 4px;
-    }
-    .metric .mval {
-      font-family: 'DM Serif Display', serif;
-      font-size: 24px; font-weight: 400; color: var(--text);
-    }
-    .metric .mval.green { color: var(--accent); }
-    .metric .mval.blue  { color: var(--blue); }
+    /* TABS RESUMEN */
+    .resumen-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .tabs { display: flex; border-bottom: 1px solid var(--border); }
+    .tab { flex: 1; padding: 10px 6px; font-size: 13px; font-weight: 500; text-align: center; cursor: pointer; color: var(--muted); border: none; background: none; font-family: 'DM Sans', sans-serif; transition: color .15s; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab:hover { color: var(--text); }
+    .resumen-body { padding: 1.25rem; }
+    .resumen-titulo { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .75rem; }
+    .resumen-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .rmetric { background: var(--bg); border-radius: 8px; padding: .75rem 1rem; }
+    .rmetric .rl { font-size: 11px; color: var(--muted); margin-bottom: 3px; text-transform: uppercase; letter-spacing: .04em; }
+    .rmetric .rv { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--text); }
+    .rmetric .rv.green { color: var(--accent); }
+    .rmetric .rv.blue  { color: var(--blue); }
+    .periodo-label { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
 
-    /* ── TABLE ── */
-    .table-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-    .table-header {
-      padding: 1rem 1.25rem 0.75rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--border);
-    }
-    .table-header h2 {
-      font-family: 'DM Serif Display', serif;
-      font-size: 16px; font-weight: 400;
-    }
-    .btn-csv {
-      font-size: 12px; padding: 5px 12px;
-      border: 1px solid var(--border); border-radius: 6px;
-      background: transparent; color: var(--muted);
-      cursor: pointer; font-family: 'DM Sans', sans-serif;
-      transition: background 0.15s;
-    }
+    /* SELECTOR PERSONALIZADO */
+    .custom-range { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: .5rem; }
+    .custom-range input[type=date] { padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; background: var(--bg); color: var(--text); outline: none; }
+    .custom-range input[type=date]:focus { border-color: var(--accent); }
+    .btn-buscar { padding: 7px 16px; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+    .btn-buscar:hover { opacity: .88; }
+
+    /* TABLE */
+    .table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .table-header { padding: 1rem 1.25rem .75rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+    .table-header h2 { font-family: 'DM Serif Display', serif; font-size: 16px; font-weight: 400; }
+    .btn-csv { font-size: 12px; padding: 5px 12px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--muted); cursor: pointer; font-family: 'DM Sans', sans-serif; }
     .btn-csv:hover { background: var(--bg); color: var(--text); }
-
     .table-wrap { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th {
-      font-size: 11px; font-weight: 500;
-      text-transform: uppercase; letter-spacing: 0.05em;
-      color: var(--muted); padding: 8px 12px;
-      text-align: right; border-bottom: 1px solid var(--border);
-      white-space: nowrap; background: var(--bg);
-    }
+    th { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--border); white-space: nowrap; background: var(--bg); }
     th:first-child { text-align: left; }
-    td {
-      padding: 10px 12px; text-align: right;
-      border-bottom: 1px solid var(--border);
-      color: var(--text); white-space: nowrap;
-    }
+    td { padding: 10px 12px; text-align: right; border-bottom: 1px solid var(--border); color: var(--text); white-space: nowrap; }
     td:first-child { text-align: left; color: var(--muted); }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: var(--bg); }
     .td-sin { font-weight: 500; color: var(--accent); }
     .td-con { font-weight: 500; color: var(--blue); }
-
-    .del-btn {
-      background: none; border: none; cursor: pointer;
-      color: #CCC; font-size: 13px; padding: 2px 6px;
-      border-radius: 4px; transition: color 0.15s, background 0.15s;
-    }
+    .del-btn { background: none; border: none; cursor: pointer; color: #CCC; font-size: 13px; padding: 2px 6px; border-radius: 4px; }
     .del-btn:hover { color: var(--danger); background: #FDF0EF; }
 
-    .spin {
-      display: inline-block; width: 14px; height: 14px;
-      border: 2px solid var(--border); border-top-color: var(--accent);
-      border-radius: 50%; animation: spin 0.7s linear infinite;
-      vertical-align: middle; margin-right: 6px;
-    }
+    .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 6px; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    tbody tr { animation: fadeIn 0.2s ease; }
-    @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+    tbody tr { animation: fadeIn .2s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; } }
   </style>
 </head>
 <body>
 
-<!-- MODAL DE CONFIRMACIÓN -->
+<!-- MODAL -->
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal">
     <h3>Confirmar registro</h3>
-    <div class="modal-row"><span class="mlabel">Fecha</span>        <span class="mval" id="m-fecha"></span></div>
-    <div class="modal-row"><span class="mlabel">Efectivo</span>     <span class="mval" id="m-efectivo"></span></div>
-    <div class="modal-row"><span class="mlabel">Tarjeta</span>      <span class="mval" id="m-tarjeta"></span></div>
-    <div class="modal-row"><span class="mlabel">Transferencia</span><span class="mval" id="m-transferencia"></span></div>
-    <div class="modal-row"><span class="mlabel">Rappi</span>        <span class="mval" id="m-rappi"></span></div>
-    <div class="modal-total">
-      <span>Total del día</span>
-      <span id="m-total"></span>
-    </div>
+    <div class="modal-row"><span class="ml">Fecha</span>        <span class="mv" id="m-fecha"></span></div>
+    <div class="modal-row"><span class="ml">Efectivo</span>     <span class="mv" id="m-efectivo"></span></div>
+    <div class="modal-row"><span class="ml">Tarjeta</span>      <span class="mv" id="m-tarjeta"></span></div>
+    <div class="modal-row"><span class="ml">Transferencia</span><span class="mv" id="m-transferencia"></span></div>
+    <div class="modal-row"><span class="ml">Rappi</span>        <span class="mv" id="m-rappi"></span></div>
+    <div class="modal-total"><span>Total del día</span><span id="m-total"></span></div>
     <div class="modal-btns">
       <button class="btn-cancel"  onclick="cerrarModal()">Corregir</button>
       <button class="btn-confirm" onclick="confirmarGuardar()">Guardar</button>
@@ -338,28 +141,11 @@
   <!-- FORMULARIO -->
   <div class="form-card">
     <h2>Nueva entrada</h2>
-
-    <div class="field">
-      <label>Fecha</label>
-      <input type="date" id="f-fecha" />
-    </div>
-    <div class="field">
-      <label>Efectivo</label>
-      <input type="text" inputmode="decimal" id="f-efectivo" placeholder="0" autocomplete="off" />
-    </div>
-    <div class="field">
-      <label>Tarjeta</label>
-      <input type="text" inputmode="decimal" id="f-tarjeta" placeholder="0" autocomplete="off" />
-    </div>
-    <div class="field">
-      <label>Transferencia</label>
-      <input type="text" inputmode="decimal" id="f-transferencia" placeholder="0" autocomplete="off" />
-    </div>
-    <div class="field">
-      <label>Rappi</label>
-      <input type="text" inputmode="decimal" id="f-rappi" placeholder="0" autocomplete="off" />
-    </div>
-
+    <div class="field"><label>Fecha</label><input type="date" id="f-fecha" /></div>
+    <div class="field"><label>Efectivo</label><input type="text" inputmode="decimal" id="f-efectivo" placeholder="0" autocomplete="off" /></div>
+    <div class="field"><label>Tarjeta</label><input type="text" inputmode="decimal" id="f-tarjeta" placeholder="0" autocomplete="off" /></div>
+    <div class="field"><label>Transferencia</label><input type="text" inputmode="decimal" id="f-transferencia" placeholder="0" autocomplete="off" /></div>
+    <div class="field"><label>Rappi</label><input type="text" inputmode="decimal" id="f-rappi" placeholder="0" autocomplete="off" /></div>
     <button class="btn-primary" id="btn-guardar" onclick="abrirModal()">Guardar</button>
     <div class="status" id="status-msg"></div>
   </div>
@@ -367,25 +153,34 @@
   <!-- PANEL DERECHO -->
   <div class="right-panel">
 
-    <div class="metrics">
-      <div class="metric">
-        <div class="mlabel">Sin comisión</div>
-        <div class="mval green" id="t-sin">—</div>
+    <!-- RESUMEN CON TABS -->
+    <div class="resumen-card">
+      <div class="tabs">
+        <button class="tab active" onclick="setTab('semana')">Esta semana</button>
+        <button class="tab"        onclick="setTab('quincena')">Quincena</button>
+        <button class="tab"        onclick="setTab('mes')">Este mes</button>
+        <button class="tab"        onclick="setTab('custom')">Personalizado</button>
       </div>
-      <div class="metric">
-        <div class="mlabel">Con comisión</div>
-        <div class="mval blue" id="t-con">—</div>
-      </div>
-      <div class="metric">
-        <div class="mlabel">Días registrados</div>
-        <div class="mval" id="t-dias">—</div>
-      </div>
-      <div class="metric">
-        <div class="mlabel">Promedio diario</div>
-        <div class="mval" id="t-prom">—</div>
+      <div class="resumen-body">
+        <div class="periodo-label" id="periodo-label"></div>
+        <div id="custom-inputs" style="display:none;margin-bottom:12px;">
+          <div class="custom-range">
+            <input type="date" id="rango-desde" />
+            <span style="color:var(--muted);font-size:13px">al</span>
+            <input type="date" id="rango-hasta" />
+            <button class="btn-buscar" onclick="renderResumen()">Buscar</button>
+          </div>
+        </div>
+        <div class="resumen-grid">
+          <div class="rmetric"><div class="rl">Sin comisión</div><div class="rv green" id="r-sin">—</div></div>
+          <div class="rmetric"><div class="rl">Con comisión</div><div class="rv blue"  id="r-con">—</div></div>
+          <div class="rmetric"><div class="rl">Días con venta</div><div class="rv" id="r-dias">—</div></div>
+          <div class="rmetric"><div class="rl">Promedio diario</div><div class="rv" id="r-prom">—</div></div>
+        </div>
       </div>
     </div>
 
+    <!-- TABLA -->
     <div class="table-card">
       <div class="table-header">
         <h2>Registros</h2>
@@ -395,20 +190,14 @@
         <table>
           <thead>
             <tr>
-              <th>Fecha</th>
-              <th>Efectivo</th>
-              <th>Tarjeta</th>
-              <th>Transfer.</th>
-              <th>Rappi</th>
+              <th>Fecha</th><th>Efectivo</th><th>Tarjeta</th><th>Transfer.</th><th>Rappi</th>
               <th style="color:var(--accent)">Sin com.</th>
               <th style="color:var(--blue)">Con com.</th>
               <th></th>
             </tr>
           </thead>
           <tbody id="tbody">
-            <tr><td colspan="8" style="text-align:center;padding:2rem;color:#7A7770;font-size:13px">
-              <span class="spin"></span>Cargando datos...
-            </td></tr>
+            <tr><td colspan="8" style="text-align:center;padding:2rem;color:#7A7770;font-size:13px"><span class="spin"></span>Cargando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -418,21 +207,50 @@
 </div>
 
 <script>
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx8IeIIsoAOfgI9mSBBLEvyOBcsAMBbXijm_9bvdoGsSmPLjQzKDpV56VSsT9wt0rSH/exec";
+  const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbzJK96C2VAV-O2ekhJ8VrW6sRTDLYG7CMk1iLi7Q_OcEoiGFmjCwHnjZboCZ2IMjzns/exec";
   const COMISION_TARJETA = 0.035;
   const COMISION_RAPPI   = 0.18;
 
   let rows = [];
   let datosParaGuardar = null;
+  let tabActual = 'semana';
 
   // ── Utilidades ───────────────────────────────────────────
-  function fmt(n)  { return '$' + Math.round(n).toLocaleString('es-MX'); }
-  function fmtN(n) { return Math.round(n).toLocaleString('es-MX'); }
+  const fmt  = n => '$' + Math.round(n).toLocaleString('es-MX');
+  const fmtN = n => Math.round(n).toLocaleString('es-MX');
 
   function calcRow(r) {
     const sin = r.efectivo + r.tarjeta + r.rappi + r.transferencia;
     const con = r.efectivo + r.tarjeta*(1-COMISION_TARJETA) + r.rappi*(1-COMISION_RAPPI) + r.transferencia;
     return { sin, con };
+  }
+
+  // Convierte "2026-05-01" → objeto Date LOCAL (sin desfase UTC)
+  function isoADate(iso) {
+    if (!iso) return null;
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  // Normaliza cualquier valor de fecha a "YYYY-MM-DD"
+  function normFecha(v) {
+    if (!v) return '';
+    if (typeof v === 'string') {
+      // Si viene como YYYY-MM-DD ya está bien
+      if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+      // Si viene como objeto Date serializado como string
+      const d = new Date(v);
+      if (!isNaN(d)) return dateToIso(d);
+      return '';
+    }
+    return '';
+  }
+
+  function dateToIso(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${dd}`;
   }
 
   function labelFecha(iso) {
@@ -453,10 +271,90 @@
     const hoy = new Date();
     document.getElementById('header-fecha').textContent =
       hoy.toLocaleDateString('es-MX', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-    document.getElementById('f-fecha').value = hoy.toISOString().split('T')[0];
+    document.getElementById('f-fecha').value = dateToIso(hoy);
   }
 
-  // ── Modal de confirmación ────────────────────────────────
+  // ── Tabs resumen ─────────────────────────────────────────
+  function setTab(tab) {
+    tabActual = tab;
+    document.querySelectorAll('.tab').forEach((t,i) => {
+      t.classList.toggle('active', ['semana','quincena','mes','custom'][i] === tab);
+    });
+    document.getElementById('custom-inputs').style.display = tab === 'custom' ? 'block' : 'none';
+    renderResumen();
+  }
+
+  function getRango() {
+    const hoy = new Date();
+    hoy.setHours(0,0,0,0);
+
+    if (tabActual === 'semana') {
+      // Semana que empieza el lunes
+      const dia = hoy.getDay(); // 0=dom, 1=lun...
+      const diff = (dia === 0) ? -6 : 1 - dia;
+      const lunes = new Date(hoy); lunes.setDate(hoy.getDate() + diff);
+      const domingo = new Date(lunes); domingo.setDate(lunes.getDate() + 6);
+      return { desde: lunes, hasta: domingo };
+    }
+
+    if (tabActual === 'quincena') {
+      const d = hoy.getDate();
+      const y = hoy.getFullYear();
+      const m = hoy.getMonth();
+      if (d <= 15) {
+        return { desde: new Date(y, m, 1), hasta: new Date(y, m, 15) };
+      } else {
+        const ultimo = new Date(y, m+1, 0).getDate();
+        return { desde: new Date(y, m, 16), hasta: new Date(y, m, ultimo) };
+      }
+    }
+
+    if (tabActual === 'mes') {
+      const y = hoy.getFullYear();
+      const m = hoy.getMonth();
+      return { desde: new Date(y, m, 1), hasta: new Date(y, m+1, 0) };
+    }
+
+    if (tabActual === 'custom') {
+      const desde = isoADate(document.getElementById('rango-desde').value);
+      const hasta = isoADate(document.getElementById('rango-hasta').value);
+      return (desde && hasta) ? { desde, hasta } : null;
+    }
+    return null;
+  }
+
+  function renderResumen() {
+    const rango = getRango();
+    if (!rango) {
+      ['r-sin','r-con','r-dias','r-prom'].forEach(id => document.getElementById(id).textContent = '—');
+      document.getElementById('periodo-label').textContent = 'Selecciona un rango de fechas';
+      return;
+    }
+
+    const { desde, hasta } = rango;
+
+    // Etiqueta del periodo
+    const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    const fmtD = d => `${d.getDate()} ${meses[d.getMonth()]} ${d.getFullYear()}`;
+    document.getElementById('periodo-label').textContent = `${fmtD(desde)} — ${fmtD(hasta)}`;
+
+    // Filtrar filas en el rango
+    const filtradas = rows.filter(r => {
+      const f = isoADate(r.fecha);
+      return f && f >= desde && f <= hasta;
+    });
+
+    let totalSin = 0, totalCon = 0;
+    filtradas.forEach(r => { const c = calcRow(r); totalSin += c.sin; totalCon += c.con; });
+    const dias = filtradas.length;
+
+    document.getElementById('r-sin').textContent  = dias ? fmt(totalSin) : '$0';
+    document.getElementById('r-con').textContent  = dias ? fmt(totalCon) : '$0';
+    document.getElementById('r-dias').textContent = dias || '0';
+    document.getElementById('r-prom').textContent = dias ? fmt(totalSin / dias) : '$0';
+  }
+
+  // ── Modal ────────────────────────────────────────────────
   function abrirModal() {
     const fecha         = document.getElementById('f-fecha').value;
     const efectivo      = parseFloat(document.getElementById('f-efectivo').value)      || 0;
@@ -465,21 +363,17 @@
     const rappi         = parseFloat(document.getElementById('f-rappi').value)         || 0;
 
     if (!fecha) { setStatus('Por favor ingresa una fecha.', true); return; }
-    if (efectivo + tarjeta + transferencia + rappi === 0) {
-      setStatus('Ingresa al menos un monto.', true); return;
-    }
+    if (efectivo + tarjeta + transferencia + rappi === 0) { setStatus('Ingresa al menos un monto.', true); return; }
 
     setStatus('');
     datosParaGuardar = { fecha, efectivo, tarjeta, transferencia, rappi };
 
-    const total = efectivo + tarjeta + transferencia + rappi;
     document.getElementById('m-fecha').textContent         = labelFecha(fecha);
     document.getElementById('m-efectivo').textContent      = fmt(efectivo);
     document.getElementById('m-tarjeta').textContent       = fmt(tarjeta);
     document.getElementById('m-transferencia').textContent = fmt(transferencia);
     document.getElementById('m-rappi').textContent         = fmt(rappi);
-    document.getElementById('m-total').textContent         = fmt(total);
-
+    document.getElementById('m-total').textContent         = fmt(efectivo + tarjeta + transferencia + rappi);
     document.getElementById('modal-overlay').classList.add('visible');
   }
 
@@ -488,43 +382,35 @@
     datosParaGuardar = null;
   }
 
-  // ── Confirmar y guardar ──────────────────────────────────
+  // ── Guardar ──────────────────────────────────────────────
   async function confirmarGuardar() {
     if (!datosParaGuardar) return;
     cerrarModal();
-
     const btn = document.getElementById('btn-guardar');
-    btn.disabled    = true;
-    btn.textContent = 'Guardando...';
+    btn.disabled = true; btn.textContent = 'Guardando...';
     setStatus('');
 
     try {
       const d = datosParaGuardar;
       const params = new URLSearchParams({
-        accion: 'agregar',
-        fecha: d.fecha,
-        efectivo: d.efectivo,
-        tarjeta: d.tarjeta,
-        transferencia: d.transferencia,
-        rappi: d.rappi
+        accion: 'agregar', fecha: d.fecha,
+        efectivo: d.efectivo, tarjeta: d.tarjeta,
+        transferencia: d.transferencia, rappi: d.rappi
       });
-      const res  = await fetch(SCRIPT_URL + '?' + params.toString(), { method:'GET' });
+      const res  = await fetch(SCRIPT_URL + '?' + params.toString(), { method: 'GET' });
       const data = await res.json();
 
       if (data.ok) {
         setStatus(data.accion === 'actualizado' ? 'Registro actualizado.' : 'Guardado correctamente.');
-        ['f-efectivo','f-tarjeta','f-transferencia','f-rappi'].forEach(id => {
-          document.getElementById(id).value = '';
-        });
+        ['f-efectivo','f-tarjeta','f-transferencia','f-rappi'].forEach(id => document.getElementById(id).value = '');
         await cargarDatos();
       } else {
         setStatus('Error: ' + (data.error || 'no se pudo guardar.'), true);
       }
-    } catch (e) {
-      setStatus('Error de conexión. Verifica tu internet.', true);
+    } catch(e) {
+      setStatus('Error de conexión: ' + e.message, true);
     } finally {
-      btn.disabled    = false;
-      btn.textContent = 'Guardar';
+      btn.disabled = false; btn.textContent = 'Guardar';
       datosParaGuardar = null;
     }
   }
@@ -532,58 +418,54 @@
   // ── Cargar datos ─────────────────────────────────────────
   async function cargarDatos() {
     try {
-      const res  = await fetch(SCRIPT_URL + '?accion=listar', { method:'GET' });
+      const res  = await fetch(SCRIPT_URL + '?accion=listar', { method: 'GET' });
       const data = await res.json();
       if (data.ok) {
         rows = data.datos.map(r => ({
-          fecha:         r.fecha,
+          fecha:         normFecha(r.fecha),
           efectivo:      parseFloat(r.efectivo)      || 0,
           tarjeta:       parseFloat(r.tarjeta)       || 0,
           transferencia: parseFloat(r.transferencia) || 0,
           rappi:         parseFloat(r.rappi)         || 0
         }));
         render();
+        renderResumen();
       } else {
         mostrarError('No se pudo cargar: ' + (data.error || ''));
       }
-    } catch (e) {
+    } catch(e) {
       mostrarError('Error de conexión al cargar datos.');
     }
   }
 
   function mostrarError(msg) {
     document.getElementById('tbody').innerHTML =
-      `<tr><td colspan="8" style="text-align:center;padding:2rem;color:#C0392B;font-size:13px">${msg}</td></tr>`;
+      `<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--danger);font-size:13px">${msg}</td></tr>`;
   }
 
   // ── Eliminar ─────────────────────────────────────────────
   async function eliminar(fecha) {
     if (!confirm(`¿Eliminar el registro del ${labelFecha(fecha)}?`)) return;
     try {
-      const res  = await fetch(SCRIPT_URL + '?accion=eliminar&fecha=' + encodeURIComponent(fecha), { method:'GET' });
+      const res  = await fetch(SCRIPT_URL + '?accion=eliminar&fecha=' + encodeURIComponent(fecha), { method: 'GET' });
       const data = await res.json();
       if (data.ok) await cargarDatos();
       else alert('No se pudo eliminar: ' + (data.error || ''));
-    } catch (e) {
-      alert('Error de conexión al eliminar.');
-    }
+    } catch(e) { alert('Error de conexión.'); }
   }
 
-  // ── Render ───────────────────────────────────────────────
+  // ── Render tabla ─────────────────────────────────────────
   function render() {
     const tbody = document.getElementById('tbody');
     tbody.innerHTML = '';
 
     if (!rows.length) {
       tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2.5rem;color:#7A7770;font-size:13px">Sin registros aún</td></tr>';
-      updateTotales(0, 0, 0);
       return;
     }
 
-    let totalSin = 0, totalCon = 0;
     [...rows].reverse().forEach(r => {
       const { sin, con } = calcRow(r);
-      totalSin += sin; totalCon += con;
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${labelFecha(r.fecha)}</td>
@@ -593,73 +475,40 @@
         <td>${fmtN(r.rappi)}</td>
         <td class="td-sin">${fmtN(sin)}</td>
         <td class="td-con">${fmtN(con)}</td>
-        <td><button class="del-btn" onclick="eliminar('${r.fecha}')">✕</button></td>
-      `;
+        <td><button class="del-btn" onclick="eliminar('${r.fecha}')">✕</button></td>`;
       tbody.appendChild(tr);
     });
-
-    updateTotales(totalSin, totalCon, rows.length);
-  }
-
-  function updateTotales(sin, con, dias) {
-    document.getElementById('t-sin').textContent  = dias ? fmt(sin)      : '—';
-    document.getElementById('t-con').textContent  = dias ? fmt(con)      : '—';
-    document.getElementById('t-dias').textContent = dias ? dias          : '—';
-    document.getElementById('t-prom').textContent = dias ? fmt(sin/dias) : '—';
   }
 
   // ── Exportar CSV ─────────────────────────────────────────
   function exportCSV() {
-    if (!rows.length) { alert('No hay datos para exportar.'); return; }
-    const h    = ['Fecha','Efectivo','Tarjeta','Transferencia','Rappi','Sin comision','Con comision'];
-    const body = rows.map(r => {
-      const { sin, con } = calcRow(r);
-      return [r.fecha, r.efectivo, r.tarjeta, r.transferencia, r.rappi, Math.round(sin), Math.round(con)].join(',');
-    });
-    const blob = new Blob([h.join(',') + '\n' + body.join('\n')], { type:'text/csv' });
-    const a    = document.createElement('a');
-    a.href     = URL.createObjectURL(blob);
-    a.download = 'ventas.csv';
-    a.click();
+    if (!rows.length) { alert('No hay datos.'); return; }
+    const h = ['Fecha','Efectivo','Tarjeta','Transferencia','Rappi','Sin comision','Con comision'];
+    const b = rows.map(r => { const {sin,con}=calcRow(r); return [r.fecha,r.efectivo,r.tarjeta,r.transferencia,r.rappi,Math.round(sin),Math.round(con)].join(','); });
+    const blob = new Blob([h.join(',')+'\n'+b.join('\n')],{type:'text/csv'});
+    const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='ventas.csv'; a.click();
   }
 
-  // ── Navegación entre campos con ArrowDown / ArrowUp / Enter ─
-  const camposOrden = ['f-fecha','f-efectivo','f-tarjeta','f-transferencia','f-rappi'];
-
-  camposOrden.forEach((id, i) => {
+  // ── Navegación teclado ───────────────────────────────────
+  const campos = ['f-fecha','f-efectivo','f-tarjeta','f-transferencia','f-rappi'];
+  campos.forEach((id, i) => {
     const el = document.getElementById(id);
     if (!el) return;
-
     if (el.type !== 'date') {
-      el.addEventListener('input', function() {
-        this.value = this.value.replace(/[^0-9.]/g, '');
-      });
+      el.addEventListener('input', function() { this.value = this.value.replace(/[^0-9.]/g,''); });
     }
-
-    el.addEventListener('keydown', function(e) {
+    el.addEventListener('keydown', e => {
       if (e.key === 'ArrowDown' || e.key === 'Enter') {
         e.preventDefault();
-        const siguiente = document.getElementById(camposOrden[i + 1]);
-        if (siguiente) siguiente.focus();
-        else abrirModal();
+        const sig = document.getElementById(campos[i+1]);
+        if (sig) sig.focus(); else abrirModal();
       }
-      if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        const anterior = document.getElementById(camposOrden[i - 1]);
-        if (anterior) anterior.focus();
-      }
+      if (e.key === 'ArrowUp') { e.preventDefault(); const ant = document.getElementById(campos[i-1]); if (ant) ant.focus(); }
     });
   });
 
-  // ── Cerrar modal con Escape ───────────────────────────────
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') cerrarModal();
-  });
-
-  // ── Cerrar modal al click fuera ───────────────────────────
-  document.getElementById('modal-overlay').addEventListener('click', function(e) {
-    if (e.target === this) cerrarModal();
-  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
+  document.getElementById('modal-overlay').addEventListener('click', function(e) { if (e.target===this) cerrarModal(); });
 
   // ── Init ─────────────────────────────────────────────────
   initHeader();
