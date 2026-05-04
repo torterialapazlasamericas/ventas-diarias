@@ -46,10 +46,7 @@
       font-weight: 400;
       color: var(--text);
     }
-    header span {
-      font-size: 13px;
-      color: var(--muted);
-    }
+    header span { font-size: 13px; color: var(--muted); }
 
     .layout {
       max-width: 900px;
@@ -63,7 +60,7 @@
 
     @media (max-width: 680px) {
       .layout { grid-template-columns: 1fr; padding: 1rem; }
-      header { padding: 1rem; }
+      header  { padding: 1rem; }
     }
 
     /* ── FORM ── */
@@ -76,13 +73,11 @@
       position: sticky;
       top: 1.5rem;
     }
-
     .form-card h2 {
       font-family: 'DM Serif Display', serif;
       font-size: 17px;
       font-weight: 400;
       margin-bottom: 1.25rem;
-      color: var(--text);
     }
 
     .field { margin-bottom: 1rem; }
@@ -123,8 +118,8 @@
       margin-top: 0.5rem;
       transition: opacity 0.15s, transform 0.1s;
     }
-    .btn-primary:hover { opacity: 0.88; }
-    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:hover   { opacity: 0.88; }
+    .btn-primary:active  { transform: scale(0.98); }
     .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
     .status {
@@ -136,10 +131,90 @@
     }
     .status.error { color: var(--danger); }
 
+    /* ── MODAL DE CONFIRMACIÓN ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.visible { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      width: 340px;
+      max-width: 90vw;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    }
+    .modal h3 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 18px;
+      font-weight: 400;
+      margin-bottom: 1rem;
+    }
+    .modal-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+    .modal-row:last-of-type { border-bottom: none; }
+    .modal-row .mlabel { color: var(--muted); }
+    .modal-row .mval   { font-weight: 500; }
+    .modal-total {
+      margin-top: 1rem;
+      padding: 10px 14px;
+      background: var(--accent-bg);
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 15px;
+    }
+    .modal-total span:last-child { font-weight: 500; color: var(--accent); }
+
+    .modal-btns {
+      display: flex;
+      gap: 10px;
+      margin-top: 1.25rem;
+    }
+    .btn-cancel {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: transparent;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+      color: var(--muted);
+      transition: background 0.15s;
+    }
+    .btn-cancel:hover { background: var(--bg); }
+    .btn-confirm {
+      flex: 2;
+      padding: 10px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-confirm:hover { opacity: 0.88; }
+
     /* ── RIGHT PANEL ── */
     .right-panel { display: flex; flex-direction: column; gap: 1.25rem; }
 
-    /* ── METRICS ── */
     .metrics {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -153,23 +228,18 @@
       box-shadow: var(--shadow);
     }
     .metric .mlabel {
-      font-size: 11px;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--muted);
-      margin-bottom: 4px;
+      font-size: 11px; font-weight: 500;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--muted); margin-bottom: 4px;
     }
     .metric .mval {
       font-family: 'DM Serif Display', serif;
-      font-size: 24px;
-      font-weight: 400;
-      color: var(--text);
+      font-size: 24px; font-weight: 400; color: var(--text);
     }
     .metric .mval.green { color: var(--accent); }
     .metric .mval.blue  { color: var(--blue); }
 
-    /* ── TABLE CARD ── */
+    /* ── TABLE ── */
     .table-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -177,7 +247,6 @@
       box-shadow: var(--shadow);
       overflow: hidden;
     }
-
     .table-header {
       padding: 1rem 1.25rem 0.75rem;
       display: flex;
@@ -187,18 +256,13 @@
     }
     .table-header h2 {
       font-family: 'DM Serif Display', serif;
-      font-size: 16px;
-      font-weight: 400;
+      font-size: 16px; font-weight: 400;
     }
     .btn-csv {
-      font-size: 12px;
-      padding: 5px 12px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: transparent;
-      color: var(--muted);
-      cursor: pointer;
-      font-family: 'DM Sans', sans-serif;
+      font-size: 12px; padding: 5px 12px;
+      border: 1px solid var(--border); border-radius: 6px;
+      background: transparent; color: var(--muted);
+      cursor: pointer; font-family: 'DM Sans', sans-serif;
       transition: background 0.15s;
     }
     .btn-csv:hover { background: var(--bg); color: var(--text); }
@@ -208,25 +272,19 @@
     th {
       font-size: 11px; font-weight: 500;
       text-transform: uppercase; letter-spacing: 0.05em;
-      color: var(--muted);
-      padding: 8px 12px;
-      text-align: right;
-      border-bottom: 1px solid var(--border);
-      white-space: nowrap;
-      background: var(--bg);
+      color: var(--muted); padding: 8px 12px;
+      text-align: right; border-bottom: 1px solid var(--border);
+      white-space: nowrap; background: var(--bg);
     }
     th:first-child { text-align: left; }
     td {
-      padding: 10px 12px;
-      text-align: right;
+      padding: 10px 12px; text-align: right;
       border-bottom: 1px solid var(--border);
-      color: var(--text);
-      white-space: nowrap;
+      color: var(--text); white-space: nowrap;
     }
-    td:first-child { text-align: left; color: var(--muted); font-size: 13px; }
+    td:first-child { text-align: left; color: var(--muted); }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: var(--bg); }
-
     .td-sin { font-weight: 500; color: var(--accent); }
     .td-con { font-weight: 500; color: var(--blue); }
 
@@ -237,39 +295,38 @@
     }
     .del-btn:hover { color: var(--danger); background: #FDF0EF; }
 
-    .empty {
-      padding: 3rem;
-      text-align: center;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .loading-row td {
-      color: var(--muted);
-      text-align: center;
-      padding: 2rem;
-      font-size: 13px;
-    }
-
-    /* spinner */
     .spin {
-      display: inline-block;
-      width: 14px; height: 14px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      vertical-align: middle;
-      margin-right: 6px;
+      display: inline-block; width: 14px; height: 14px;
+      border: 2px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      vertical-align: middle; margin-right: 6px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* fade in rows */
     tbody tr { animation: fadeIn 0.2s ease; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
   </style>
 </head>
 <body>
+
+<!-- MODAL DE CONFIRMACIÓN -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h3>Confirmar registro</h3>
+    <div class="modal-row"><span class="mlabel">Fecha</span>        <span class="mval" id="m-fecha"></span></div>
+    <div class="modal-row"><span class="mlabel">Efectivo</span>     <span class="mval" id="m-efectivo"></span></div>
+    <div class="modal-row"><span class="mlabel">Tarjeta</span>      <span class="mval" id="m-tarjeta"></span></div>
+    <div class="modal-row"><span class="mlabel">Transferencia</span><span class="mval" id="m-transferencia"></span></div>
+    <div class="modal-row"><span class="mlabel">Rappi</span>        <span class="mval" id="m-rappi"></span></div>
+    <div class="modal-total">
+      <span>Total del día</span>
+      <span id="m-total"></span>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel"  onclick="cerrarModal()">Corregir</button>
+      <button class="btn-confirm" onclick="confirmarGuardar()">Guardar</button>
+    </div>
+  </div>
+</div>
 
 <header>
   <h1>Registro de ventas</h1>
@@ -295,22 +352,21 @@
       <input type="number" id="f-tarjeta" placeholder="0" min="0" />
     </div>
     <div class="field">
-      <label>Rappi</label>
-      <input type="number" id="f-rappi" placeholder="0" min="0" />
-    </div>
-    <div class="field">
       <label>Transferencia</label>
       <input type="number" id="f-transferencia" placeholder="0" min="0" />
     </div>
+    <div class="field">
+      <label>Rappi</label>
+      <input type="number" id="f-rappi" placeholder="0" min="0" />
+    </div>
 
-    <button class="btn-primary" id="btn-guardar" onclick="guardar()">Guardar en Google Sheets</button>
+    <button class="btn-primary" id="btn-guardar" onclick="abrirModal()">Guardar</button>
     <div class="status" id="status-msg"></div>
   </div>
 
   <!-- PANEL DERECHO -->
   <div class="right-panel">
 
-    <!-- MÉTRICAS -->
     <div class="metrics">
       <div class="metric">
         <div class="mlabel">Sin comisión</div>
@@ -330,7 +386,6 @@
       </div>
     </div>
 
-    <!-- TABLA -->
     <div class="table-card">
       <div class="table-header">
         <h2>Registros</h2>
@@ -343,17 +398,17 @@
               <th>Fecha</th>
               <th>Efectivo</th>
               <th>Tarjeta</th>
-              <th>Rappi</th>
               <th>Transfer.</th>
+              <th>Rappi</th>
               <th style="color:var(--accent)">Sin com.</th>
               <th style="color:var(--blue)">Con com.</th>
               <th></th>
             </tr>
           </thead>
           <tbody id="tbody">
-            <tr class="loading-row">
-              <td colspan="8"><span class="spin"></span>Cargando datos...</td>
-            </tr>
+            <tr><td colspan="8" style="text-align:center;padding:2rem;color:#7A7770;font-size:13px">
+              <span class="spin"></span>Cargando datos...
+            </td></tr>
           </tbody>
         </table>
       </div>
@@ -363,13 +418,14 @@
 </div>
 
 <script>
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyti7JkwfkbjuskokX4Cz_f3v1ERTBw8EeO44Nlf7u3_QCwO0VGlBrnSxpMOTLCE21r/exec";
+  const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbyAHiXV0aSCtPxbrBwL5AwqfuAclCXoyde0JEPwz9OorIkofJcsxyxP-2XxN4QWLEXG/exec";
   const COMISION_TARJETA = 0.035;
   const COMISION_RAPPI   = 0.18;
 
   let rows = [];
+  let datosParaGuardar = null;
 
-  // ── Utilidades ──────────────────────────────────────────
+  // ── Utilidades ───────────────────────────────────────────
   function fmt(n)  { return '$' + Math.round(n).toLocaleString('es-MX'); }
   function fmtN(n) { return Math.round(n).toLocaleString('es-MX'); }
 
@@ -392,73 +448,66 @@
     el.className = 'status' + (isError ? ' error' : '');
   }
 
-  // ── Header fecha ─────────────────────────────────────────
+  // ── Header ───────────────────────────────────────────────
   function initHeader() {
     const hoy = new Date();
-    const opciones = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
     document.getElementById('header-fecha').textContent =
-      hoy.toLocaleDateString('es-MX', opciones);
+      hoy.toLocaleDateString('es-MX', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
     document.getElementById('f-fecha').value = hoy.toISOString().split('T')[0];
   }
 
-  // ── Cargar datos desde Sheets ────────────────────────────
-  async function cargarDatos() {
-    try {
-      const res = await fetch(SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({ accion: 'listar' })
-      });
-      const data = await res.json();
-      if (data.ok) {
-        rows = data.datos.map(r => ({
-          fecha:         r.fecha,
-          efectivo:      parseFloat(r.efectivo)      || 0,
-          tarjeta:       parseFloat(r.tarjeta)       || 0,
-          rappi:         parseFloat(r.rappi)         || 0,
-          transferencia: parseFloat(r.transferencia) || 0
-        }));
-        render();
-      } else {
-        mostrarError('No se pudo cargar: ' + (data.error || 'error desconocido'));
-      }
-    } catch (e) {
-      mostrarError('Error de conexión al cargar datos.');
-    }
-  }
-
-  function mostrarError(msg) {
-    document.getElementById('tbody').innerHTML =
-      `<tr class="loading-row"><td colspan="8" style="color:#C0392B">${msg}</td></tr>`;
-  }
-
-  // ── Guardar ──────────────────────────────────────────────
-  async function guardar() {
+  // ── Modal de confirmación ────────────────────────────────
+  function abrirModal() {
     const fecha         = document.getElementById('f-fecha').value;
     const efectivo      = parseFloat(document.getElementById('f-efectivo').value)      || 0;
     const tarjeta       = parseFloat(document.getElementById('f-tarjeta').value)       || 0;
-    const rappi         = parseFloat(document.getElementById('f-rappi').value)         || 0;
     const transferencia = parseFloat(document.getElementById('f-transferencia').value) || 0;
+    const rappi         = parseFloat(document.getElementById('f-rappi').value)         || 0;
 
     if (!fecha) { setStatus('Por favor ingresa una fecha.', true); return; }
-    if (efectivo + tarjeta + rappi + transferencia === 0) {
+    if (efectivo + tarjeta + transferencia + rappi === 0) {
       setStatus('Ingresa al menos un monto.', true); return;
     }
 
+    setStatus('');
+    datosParaGuardar = { fecha, efectivo, tarjeta, transferencia, rappi };
+
+    const total = efectivo + tarjeta + transferencia + rappi;
+    document.getElementById('m-fecha').textContent         = labelFecha(fecha);
+    document.getElementById('m-efectivo').textContent      = fmt(efectivo);
+    document.getElementById('m-tarjeta').textContent       = fmt(tarjeta);
+    document.getElementById('m-transferencia').textContent = fmt(transferencia);
+    document.getElementById('m-rappi').textContent         = fmt(rappi);
+    document.getElementById('m-total').textContent         = fmt(total);
+
+    document.getElementById('modal-overlay').classList.add('visible');
+  }
+
+  function cerrarModal() {
+    document.getElementById('modal-overlay').classList.remove('visible');
+    datosParaGuardar = null;
+  }
+
+  // ── Confirmar y guardar ──────────────────────────────────
+  async function confirmarGuardar() {
+    if (!datosParaGuardar) return;
+    cerrarModal();
+
     const btn = document.getElementById('btn-guardar');
-    btn.disabled = true;
+    btn.disabled    = true;
     btn.textContent = 'Guardando...';
     setStatus('');
 
     try {
-      const res = await fetch(SCRIPT_URL, {
+      const res  = await fetch(SCRIPT_URL, {
         method: 'POST',
-        body: JSON.stringify({ accion:'agregar', fecha, efectivo, tarjeta, rappi, transferencia })
+        body: JSON.stringify({ accion: 'agregar', ...datosParaGuardar })
       });
       const data = await res.json();
 
       if (data.ok) {
         setStatus(data.accion === 'actualizado' ? 'Registro actualizado.' : 'Guardado correctamente.');
-        ['f-efectivo','f-tarjeta','f-rappi','f-transferencia'].forEach(id => {
+        ['f-efectivo','f-tarjeta','f-transferencia','f-rappi'].forEach(id => {
           document.getElementById(id).value = '';
         });
         await cargarDatos();
@@ -468,25 +517,47 @@
     } catch (e) {
       setStatus('Error de conexión. Verifica tu internet.', true);
     } finally {
-      btn.disabled = false;
-      btn.textContent = 'Guardar en Google Sheets';
+      btn.disabled    = false;
+      btn.textContent = 'Guardar';
+      datosParaGuardar = null;
     }
+  }
+
+  // ── Cargar datos ─────────────────────────────────────────
+  async function cargarDatos() {
+    try {
+      const res  = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({ accion:'listar' }) });
+      const data = await res.json();
+      if (data.ok) {
+        rows = data.datos.map(r => ({
+          fecha:         r.fecha,
+          efectivo:      parseFloat(r.efectivo)      || 0,
+          tarjeta:       parseFloat(r.tarjeta)       || 0,
+          transferencia: parseFloat(r.transferencia) || 0,
+          rappi:         parseFloat(r.rappi)         || 0
+        }));
+        render();
+      } else {
+        mostrarError('No se pudo cargar: ' + (data.error || ''));
+      }
+    } catch (e) {
+      mostrarError('Error de conexión al cargar datos.');
+    }
+  }
+
+  function mostrarError(msg) {
+    document.getElementById('tbody').innerHTML =
+      `<tr><td colspan="8" style="text-align:center;padding:2rem;color:#C0392B;font-size:13px">${msg}</td></tr>`;
   }
 
   // ── Eliminar ─────────────────────────────────────────────
   async function eliminar(fecha) {
     if (!confirm(`¿Eliminar el registro del ${labelFecha(fecha)}?`)) return;
     try {
-      const res = await fetch(SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({ accion:'eliminar', fecha })
-      });
+      const res  = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({ accion:'eliminar', fecha }) });
       const data = await res.json();
-      if (data.ok) {
-        await cargarDatos();
-      } else {
-        alert('No se pudo eliminar: ' + (data.error || ''));
-      }
+      if (data.ok) await cargarDatos();
+      else alert('No se pudo eliminar: ' + (data.error || ''));
     } catch (e) {
       alert('Error de conexión al eliminar.');
     }
@@ -512,8 +583,8 @@
         <td>${labelFecha(r.fecha)}</td>
         <td>${fmtN(r.efectivo)}</td>
         <td>${fmtN(r.tarjeta)}</td>
-        <td>${fmtN(r.rappi)}</td>
         <td>${fmtN(r.transferencia)}</td>
+        <td>${fmtN(r.rappi)}</td>
         <td class="td-sin">${fmtN(sin)}</td>
         <td class="td-con">${fmtN(con)}</td>
         <td><button class="del-btn" onclick="eliminar('${r.fecha}')">✕</button></td>
@@ -525,30 +596,35 @@
   }
 
   function updateTotales(sin, con, dias) {
-    document.getElementById('t-sin').textContent  = dias ? fmt(sin) : '—';
-    document.getElementById('t-con').textContent  = dias ? fmt(con) : '—';
-    document.getElementById('t-dias').textContent = dias || '—';
+    document.getElementById('t-sin').textContent  = dias ? fmt(sin)      : '—';
+    document.getElementById('t-con').textContent  = dias ? fmt(con)      : '—';
+    document.getElementById('t-dias').textContent = dias ? dias          : '—';
     document.getElementById('t-prom').textContent = dias ? fmt(sin/dias) : '—';
   }
 
   // ── Exportar CSV ─────────────────────────────────────────
   function exportCSV() {
     if (!rows.length) { alert('No hay datos para exportar.'); return; }
-    const h = ['Fecha','Efectivo','Tarjeta','Rappi','Transferencia','Sin comision','Con comision'];
+    const h    = ['Fecha','Efectivo','Tarjeta','Transferencia','Rappi','Sin comision','Con comision'];
     const body = rows.map(r => {
       const { sin, con } = calcRow(r);
-      return [r.fecha, r.efectivo, r.tarjeta, r.rappi, r.transferencia, Math.round(sin), Math.round(con)].join(',');
+      return [r.fecha, r.efectivo, r.tarjeta, r.transferencia, r.rappi, Math.round(sin), Math.round(con)].join(',');
     });
-    const blob = new Blob([h.join(',') + '\n' + body.join('\n')], { type: 'text/csv' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
+    const blob = new Blob([h.join(',') + '\n' + body.join('\n')], { type:'text/csv' });
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
     a.download = 'ventas.csv';
     a.click();
   }
 
-  // ── Enter para guardar ───────────────────────────────────
+  // ── Cerrar modal con Escape ───────────────────────────────
   document.addEventListener('keydown', e => {
-    if (e.key === 'Enter') guardar();
+    if (e.key === 'Escape') cerrarModal();
+  });
+
+  // ── Cerrar modal al click fuera ───────────────────────────
+  document.getElementById('modal-overlay').addEventListener('click', function(e) {
+    if (e.target === this) cerrarModal();
   });
 
   // ── Init ─────────────────────────────────────────────────
