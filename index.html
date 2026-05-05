@@ -260,7 +260,7 @@
 </div>
 
 <script>
-  const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycby2CozarZscW4IGGCJSkFWYYX53aqO498yvPD4HD4GOjo_6gOkBWHcR-Bdr9kYDww6D/exec";
+  const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbwG-lG7JJ0Ow3Tv7qAQTDFe0McrMoYtKEPvTPWAkXo4rYiABk6N00qBzwGMWkJ37dJ2/exec";
   const COMISION_TARJETA = 0.035;
   const COMISION_RAPPI   = 0.18;
 
@@ -401,8 +401,8 @@
     // Sumar columnas del sheet
     const sum = (campo) => filtradas.reduce((acc, r) => acc + (r[campo] || 0), 0);
 
-    const totH          = sum('ventaSinRappi');      // col H
-    const totJ          = sum('ventaConRappi');       // col J
+    const totH          = sum('ventaConRappi');      // col J — Venta total sin Rappi
+    const totJ          = sum('ventaTotalConRappi'); // col K — Venta total con Rappi
     const totEfectivo   = sum('efectivo');            // col B
     const totTransfer   = sum('transferencia');       // col G
     const totTarjetaSin = sum('tarjeta');             // col C
