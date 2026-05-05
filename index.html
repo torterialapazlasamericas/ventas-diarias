@@ -242,18 +242,18 @@
       <div class="pin-dot" id="dot-2"></div>
       <div class="pin-dot" id="dot-3"></div>
     </div>
-    <div class="pin-teclado">
-      <button class="pin-btn" onclick="pinIngresa(1)">1</button>
-      <button class="pin-btn" onclick="pinIngresa(2)">2</button>
-      <button class="pin-btn" onclick="pinIngresa(3)">3</button>
-      <button class="pin-btn" onclick="pinIngresa(4)">4</button>
-      <button class="pin-btn" onclick="pinIngresa(5)">5</button>
-      <button class="pin-btn" onclick="pinIngresa(6)">6</button>
-      <button class="pin-btn" onclick="pinIngresa(7)">7</button>
-      <button class="pin-btn" onclick="pinIngresa(8)">8</button>
-      <button class="pin-btn" onclick="pinIngresa(9)">9</button>
-      <button class="pin-btn" onclick="pinIngresa(0)" style="grid-column:2">0</button>
-      <button class="pin-btn borrar" onclick="pinBorrar()">⌫</button>
+    <div class="pin-teclado" id="pin-teclado">
+      <button class="pin-btn" data-pin="1">1</button>
+      <button class="pin-btn" data-pin="2">2</button>
+      <button class="pin-btn" data-pin="3">3</button>
+      <button class="pin-btn" data-pin="4">4</button>
+      <button class="pin-btn" data-pin="5">5</button>
+      <button class="pin-btn" data-pin="6">6</button>
+      <button class="pin-btn" data-pin="7">7</button>
+      <button class="pin-btn" data-pin="8">8</button>
+      <button class="pin-btn" data-pin="9">9</button>
+      <button class="pin-btn" data-pin="0" style="grid-column:2">0</button>
+      <button class="pin-btn borrar" data-pin="borrar">⌫</button>
     </div>
     <div class="pin-error"   id="pin-error"></div>
     <div class="pin-cargando" id="pin-cargando"></div>
@@ -915,6 +915,15 @@
     }
   }
 
+  // Event delegation para el teclado PIN en pantalla
+  document.getElementById('pin-teclado').addEventListener('click', function(e) {
+    const btn = e.target.closest('[data-pin]');
+    if (!btn) return;
+    const val = btn.getAttribute('data-pin');
+    if (val === 'borrar') pinBorrar();
+    else pinIngresa(parseInt(val));
+  });
+
   // Soporte teclado físico para el PIN
   document.addEventListener('keydown', function(e) {
     const screen = document.getElementById('pin-screen');
@@ -1138,9 +1147,7 @@
     if (!gastosRows.length) { alert('No hay gastos para exportar.'); return; }
     const h = ['ID','Fecha','Nombre','FormaPago','Cantidad','Nota'];
     const b = gastosRows.map(g => [g.id,g.fecha,g.nombre,g.formaPago,g.cantidad,g.nota].join(','));
-    const blob = new Blob([h.join(',')+'
-'+b.join('
-')],{type:'text/csv'});
+    const blob = new Blob([h.join(',')+'\n'+b.join('\n')],{type:'text/csv'});
     const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='gastos.csv'; a.click();
   }
 
