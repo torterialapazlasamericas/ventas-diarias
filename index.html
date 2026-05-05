@@ -107,6 +107,22 @@
     .td-con { font-weight: 500; color: var(--blue); }
     .del-btn { background: none; border: none; cursor: pointer; color: #CCC; font-size: 13px; padding: 2px 6px; border-radius: 4px; }
     .del-btn:hover { color: var(--danger); background: #FDF0EF; }
+    .btn-corregir { background: none; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; color: var(--muted); font-size: 12px; font-family: 'DM Sans', sans-serif; padding: 4px 10px; white-space: nowrap; transition: background .15s, color .15s; }
+    .btn-corregir:hover { background: var(--acc-bg); color: var(--accent); border-color: var(--accent); }
+
+    /* ── Responsive móvil mejorado ── */
+    @media (max-width: 700px) {
+      .layout { grid-template-columns: 1fr; padding: .75rem; gap: 1rem; }
+      header { padding: .85rem 1rem; }
+      header h1 { font-size: 18px; }
+      .form-card { position: static; padding: 1.1rem; }
+      .resumen-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+      .rmetric .rv { font-size: 16px; }
+      .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      table { font-size: 12px; }
+      th, td { padding: 7px 8px; }
+      .btn-corregir { font-size: 11px; padding: 3px 7px; }
+    }
 
     .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 6px; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -244,8 +260,6 @@
           <thead>
             <tr>
               <th>Fecha</th><th>Efectivo</th><th>Tarjeta</th><th>Transfer.</th><th>Rappi</th>
-              <th style="color:var(--accent)">Sin com.</th>
-              <th style="color:var(--blue)">Con com.</th>
               <th></th>
             </tr>
           </thead>
@@ -536,12 +550,14 @@
     tbody.innerHTML = '';
 
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2.5rem;color:#7A7770;font-size:13px">Sin registros aún</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2.5rem;color:#7A7770;font-size:13px">Sin registros aún</td></tr>';
       return;
     }
 
-    [...rows].reverse().forEach(r => {
-      const { sin, con } = calcRow(r);
+    // Solo los últimos 7 registros (más recientes primero)
+    const ultimos = [...rows].reverse().slice(0, 7);
+
+    ultimos.forEach(r => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${labelFecha(r.fecha)}</td>
@@ -549,11 +565,26 @@
         <td>${fmtN(r.tarjeta)}</td>
         <td>${fmtN(r.transferencia)}</td>
         <td>${fmtN(r.rappi)}</td>
-        <td class="td-sin">${fmtN(sin)}</td>
-        <td class="td-con">${fmtN(con)}</td>
-        <td><button class="del-btn" onclick="eliminar('${r.fecha}')">✕</button></td>`;
+        <td style="text-align:center">
+          <button class="btn-corregir" onclick="corregir('${r.fecha}')">Corregir</button>
+        </td>`;
       tbody.appendChild(tr);
     });
+  }
+
+  // ── Corregir registro — precarga datos en el formulario ──
+  function corregir(fecha) {
+    const r = rows.find(x => x.fecha === fecha);
+    if (!r) return;
+    document.getElementById('f-fecha').value         = r.fecha;
+    document.getElementById('f-efectivo').value      = r.efectivo      || '';
+    document.getElementById('f-tarjeta').value       = r.tarjeta       || '';
+    document.getElementById('f-transferencia').value = r.transferencia || '';
+    document.getElementById('f-rappi').value         = r.rappi         || '';
+    // Scroll al formulario
+    document.querySelector('.form-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('f-efectivo').focus();
+    setStatus('Editando registro del ' + labelFecha(fecha) + ' — modifica y guarda.', false);
   }
 
   // ── Exportar CSV ─────────────────────────────────────────
