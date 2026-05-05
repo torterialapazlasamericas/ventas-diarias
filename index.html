@@ -78,6 +78,8 @@
     .rmetric .rv { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--text); }
     .rmetric .rv.green { color: var(--accent); }
     .rmetric .rv.blue  { color: var(--blue); }
+    .rmetric-destacado { background: var(--surface); border: 1px solid var(--border); }
+    .resumen-divider { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 4px 0 10px; padding-top: 10px; border-top: 1px solid var(--border); }
     .periodo-label { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
 
     /* SELECTOR PERSONALIZADO */
@@ -171,12 +173,63 @@
             <button class="btn-buscar" onclick="renderResumen()">Buscar</button>
           </div>
         </div>
-        <div class="resumen-grid">
-          <div class="rmetric"><div class="rl">Sin comisión</div><div class="rv green" id="r-sin">—</div></div>
-          <div class="rmetric"><div class="rl">Con comisión</div><div class="rv blue"  id="r-con">—</div></div>
-          <div class="rmetric"><div class="rl">Días con venta</div><div class="rv" id="r-dias">—</div></div>
-          <div class="rmetric"><div class="rl">Promedio diario</div><div class="rv" id="r-prom">—</div></div>
+
+        <!-- Totales principales (col H y J) -->
+        <div class="resumen-grid" style="margin-bottom:12px;">
+          <div class="rmetric rmetric-destacado">
+            <div class="rl">Venta total sin Rappi</div>
+            <div class="rv green" id="r-h">—</div>
+          </div>
+          <div class="rmetric rmetric-destacado">
+            <div class="rl">Venta total con Rappi</div>
+            <div class="rv blue" id="r-j">—</div>
+          </div>
         </div>
+
+        <!-- Desglose por forma de pago -->
+        <div class="resumen-divider">Desglose por forma de pago</div>
+
+        <div class="resumen-grid">
+          <!-- Efectivo -->
+          <div class="rmetric">
+            <div class="rl">Efectivo</div>
+            <div class="rv" id="r-efectivo">—</div>
+          </div>
+          <!-- Transferencia -->
+          <div class="rmetric">
+            <div class="rl">Transferencia</div>
+            <div class="rv" id="r-transfer">—</div>
+          </div>
+          <!-- Tarjeta sin comisión -->
+          <div class="rmetric">
+            <div class="rl">Tarjeta sin comisión</div>
+            <div class="rv" id="r-tarjeta-sin">—</div>
+          </div>
+          <!-- Tarjeta con comisión -->
+          <div class="rmetric">
+            <div class="rl">Tarjeta con comisión</div>
+            <div class="rv" id="r-tarjeta-con">—</div>
+          </div>
+          <!-- Rappi sin comisión -->
+          <div class="rmetric">
+            <div class="rl">Rappi sin comisión</div>
+            <div class="rv" id="r-rappi-sin">—</div>
+          </div>
+          <!-- Rappi con comisión -->
+          <div class="rmetric">
+            <div class="rl">Rappi con comisión</div>
+            <div class="rv" id="r-rappi-con">—</div>
+          </div>
+        </div>
+
+        <!-- Promedio -->
+        <div class="resumen-grid" style="margin-top:12px;">
+          <div class="rmetric" style="grid-column:1/-1;">
+            <div class="rl">Promedio de venta total (col J)</div>
+            <div class="rv" id="r-prom">—</div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -207,7 +260,7 @@
 </div>
 
 <script>
-  const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbxEsha2pVjkzmAgb2qJpWJFHDLIM8aoqeC5FjmO6rb2K9peYbuw0hEqmgRjTjqCTHhi/exec";
+  const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycby2CozarZscW4IGGCJSkFWYYX53aqO498yvPD4HD4GOjo_6gOkBWHcR-Bdr9kYDww6D/exec";
   const COMISION_TARJETA = 0.035;
   const COMISION_RAPPI   = 0.18;
 
@@ -324,34 +377,49 @@
   }
 
   function renderResumen() {
+    const ids = ['r-h','r-j','r-efectivo','r-transfer','r-tarjeta-sin','r-tarjeta-con','r-rappi-sin','r-rappi-con','r-prom'];
     const rango = getRango();
     if (!rango) {
-      ['r-sin','r-con','r-dias','r-prom'].forEach(id => document.getElementById(id).textContent = '—');
+      ids.forEach(id => document.getElementById(id).textContent = '—');
       document.getElementById('periodo-label').textContent = 'Selecciona un rango de fechas';
       return;
     }
 
     const { desde, hasta } = rango;
 
-    // Etiqueta del periodo
     const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
     const fmtD = d => `${d.getDate()} ${meses[d.getMonth()]} ${d.getFullYear()}`;
     document.getElementById('periodo-label').textContent = `${fmtD(desde)} — ${fmtD(hasta)}`;
 
-    // Filtrar filas en el rango
     const filtradas = rows.filter(r => {
       const f = isoADate(r.fecha);
       return f && f >= desde && f <= hasta;
     });
 
-    let totalSin = 0, totalCon = 0;
-    filtradas.forEach(r => { const c = calcRow(r); totalSin += c.sin; totalCon += c.con; });
     const dias = filtradas.length;
 
-    document.getElementById('r-sin').textContent  = dias ? fmt(totalSin) : '$0';
-    document.getElementById('r-con').textContent  = dias ? fmt(totalCon) : '$0';
-    document.getElementById('r-dias').textContent = dias || '0';
-    document.getElementById('r-prom').textContent = dias ? fmt(totalSin / dias) : '$0';
+    // Sumar columnas del sheet
+    const sum = (campo) => filtradas.reduce((acc, r) => acc + (r[campo] || 0), 0);
+
+    const totH          = sum('ventaSinRappi');      // col H
+    const totJ          = sum('ventaConRappi');       // col J
+    const totEfectivo   = sum('efectivo');            // col B
+    const totTransfer   = sum('transferencia');       // col G
+    const totTarjetaSin = sum('tarjeta');             // col C
+    const totTarjetaCon = sum('tarjetaCon');          // col D
+    const totRappiSin   = sum('rappi');               // col E
+    const totRappiCon   = sum('rappiCon');            // col F
+    const promedio      = dias > 0 ? totJ / dias : 0;
+
+    document.getElementById('r-h').textContent           = fmt(totH);
+    document.getElementById('r-j').textContent           = fmt(totJ);
+    document.getElementById('r-efectivo').textContent    = fmt(totEfectivo);
+    document.getElementById('r-transfer').textContent    = fmt(totTransfer);
+    document.getElementById('r-tarjeta-sin').textContent = fmt(totTarjetaSin);
+    document.getElementById('r-tarjeta-con').textContent = fmt(totTarjetaCon);
+    document.getElementById('r-rappi-sin').textContent   = fmt(totRappiSin);
+    document.getElementById('r-rappi-con').textContent   = fmt(totRappiCon);
+    document.getElementById('r-prom').textContent        = fmt(promedio);
   }
 
   // ── Modal ────────────────────────────────────────────────
@@ -424,11 +492,17 @@
         rows = data.datos
           .filter(r => r && r.fecha && /^\d{4}-\d{2}-\d{2}$/.test(normFecha(r.fecha)))
           .map(r => ({
-            fecha:         normFecha(r.fecha),
-            efectivo:      parseFloat(r.efectivo)      || 0,
-            tarjeta:       parseFloat(r.tarjeta)       || 0,
-            transferencia: parseFloat(r.transferencia) || 0,
-            rappi:         parseFloat(r.rappi)         || 0
+            fecha:              normFecha(r.fecha),
+            efectivo:           parseFloat(r.efectivo)           || 0,  // B
+            tarjeta:            parseFloat(r.tarjeta)            || 0,  // C
+            tarjetaCon:         parseFloat(r.tarjetaCon)         || 0,  // D
+            rappi:              parseFloat(r.rappi)              || 0,  // E
+            rappiCon:           parseFloat(r.rappiCon)           || 0,  // F
+            transferencia:      parseFloat(r.transferencia)      || 0,  // G
+            ventaSinRappi:      parseFloat(r.ventaSinRappi)      || 0,  // H
+            ventaConRappiTot:   parseFloat(r.ventaConRappiTot)   || 0,  // I
+            ventaConRappi:      parseFloat(r.ventaConRappi)      || 0,  // J
+            ventaTotalConRappi: parseFloat(r.ventaTotalConRappi) || 0   // K
           }));
         render();
         renderResumen();
