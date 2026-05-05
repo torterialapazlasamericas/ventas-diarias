@@ -23,6 +23,51 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; }
 
+    /* ── Pantalla PIN ── */
+    #pin-screen {
+      position: fixed; inset: 0; background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 999;
+    }
+    #pin-screen.oculto { display: none; }
+    .pin-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 2.5rem 2rem;
+      width: 320px; max-width: 90vw;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+      text-align: center;
+    }
+    .pin-card h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px; font-weight: 400; margin-bottom: 6px;
+    }
+    .pin-card p { font-size: 13px; color: var(--muted); margin-bottom: 1.5rem; }
+    .pin-dots {
+      display: flex; justify-content: center; gap: 12px; margin-bottom: 1.5rem;
+    }
+    .pin-dot {
+      width: 14px; height: 14px; border-radius: 50%;
+      border: 2px solid var(--border); background: transparent;
+      transition: background .15s, border-color .15s;
+    }
+    .pin-dot.filled { background: var(--accent); border-color: var(--accent); }
+    .pin-dot.error  { background: var(--danger); border-color: var(--danger); }
+    .pin-teclado {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 10px; margin-bottom: 1rem;
+    }
+    .pin-btn {
+      padding: 14px; border: 1px solid var(--border); border-radius: 10px;
+      background: var(--bg); font-family: 'DM Sans', sans-serif;
+      font-size: 20px; font-weight: 500; cursor: pointer;
+      color: var(--text); transition: background .1s, transform .1s;
+    }
+    .pin-btn:hover  { background: var(--acc-bg); border-color: var(--accent); }
+    .pin-btn:active { transform: scale(.94); }
+    .pin-btn.borrar { font-size: 16px; color: var(--muted); }
+    .pin-error { font-size: 13px; color: var(--danger); min-height: 18px; margin-top: 4px; }
+    .pin-cargando { font-size: 13px; color: var(--muted); min-height: 18px; margin-top: 4px; }
+
     header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1.25rem 2rem; display: flex; align-items: baseline; gap: 12px; }
     header h1 { font-family: 'DM Serif Display', serif; font-size: 22px; font-weight: 400; }
     header span { font-size: 13px; color: var(--muted); }
@@ -131,6 +176,35 @@
   </style>
 </head>
 <body>
+
+<!-- PANTALLA DE PIN -->
+<div id="pin-screen">
+  <div class="pin-card">
+    <h2>Registro de ventas</h2>
+    <p>Ingresa tu PIN de 4 dígitos</p>
+    <div class="pin-dots">
+      <div class="pin-dot" id="dot-0"></div>
+      <div class="pin-dot" id="dot-1"></div>
+      <div class="pin-dot" id="dot-2"></div>
+      <div class="pin-dot" id="dot-3"></div>
+    </div>
+    <div class="pin-teclado">
+      <button class="pin-btn" onclick="pinIngresa(1)">1</button>
+      <button class="pin-btn" onclick="pinIngresa(2)">2</button>
+      <button class="pin-btn" onclick="pinIngresa(3)">3</button>
+      <button class="pin-btn" onclick="pinIngresa(4)">4</button>
+      <button class="pin-btn" onclick="pinIngresa(5)">5</button>
+      <button class="pin-btn" onclick="pinIngresa(6)">6</button>
+      <button class="pin-btn" onclick="pinIngresa(7)">7</button>
+      <button class="pin-btn" onclick="pinIngresa(8)">8</button>
+      <button class="pin-btn" onclick="pinIngresa(9)">9</button>
+      <button class="pin-btn" onclick="pinIngresa(0)" style="grid-column:2">0</button>
+      <button class="pin-btn borrar" onclick="pinBorrar()">⌫</button>
+    </div>
+    <div class="pin-error"   id="pin-error"></div>
+    <div class="pin-cargando" id="pin-cargando"></div>
+  </div>
+</div>
 
 <!-- MODAL -->
 <div class="modal-overlay" id="modal-overlay">
@@ -274,7 +348,7 @@
 </div>
 
 <script>
-  const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbwG-lG7JJ0Ow3Tv7qAQTDFe0McrMoYtKEPvTPWAkXo4rYiABk6N00qBzwGMWkJ37dJ2/exec";
+  const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbwJ1bFwvZEvEMBGTSofHFDGzCvasUPHpUUJ9y0x5vpK6cg_ui5I5KmKuLaaYdwUGqZt/exec";
   const COMISION_TARJETA = 0.035;
   const COMISION_RAPPI   = 0.18;
 
@@ -617,9 +691,71 @@
   document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
   document.getElementById('modal-overlay').addEventListener('click', function(e) { if (e.target===this) cerrarModal(); });
 
+  // ── Lógica PIN ──────────────────────────────────────────
+  let pinActual = '';
+  const PIN_LEN = 4;
+
+  function pinIngresa(digito) {
+    if (pinActual.length >= PIN_LEN) return;
+    pinActual += String(digito);
+    actualizarDots(false);
+    if (pinActual.length === PIN_LEN) {
+      setTimeout(verificarPinServidor, 150);
+    }
+  }
+
+  function pinBorrar() {
+    pinActual = pinActual.slice(0, -1);
+    actualizarDots(false);
+    document.getElementById('pin-error').textContent = '';
+  }
+
+  function actualizarDots(error) {
+    for (let i = 0; i < PIN_LEN; i++) {
+      const dot = document.getElementById('dot-' + i);
+      dot.classList.remove('filled', 'error');
+      if (error) {
+        if (i < PIN_LEN) dot.classList.add('error');
+      } else {
+        if (i < pinActual.length) dot.classList.add('filled');
+      }
+    }
+  }
+
+  async function verificarPinServidor() {
+    document.getElementById('pin-cargando').textContent = 'Verificando...';
+    document.getElementById('pin-error').textContent = '';
+    try {
+      const res  = await fetch(SCRIPT_URL + '?accion=verificarPin&pin=' + encodeURIComponent(pinActual));
+      const data = await res.json();
+      document.getElementById('pin-cargando').textContent = '';
+      if (data.ok && data.acceso) {
+        document.getElementById('pin-screen').classList.add('oculto');
+        initHeader();
+        cargarDatos();
+      } else {
+        actualizarDots(true);
+        document.getElementById('pin-error').textContent = 'PIN incorrecto, intenta de nuevo';
+        pinActual = '';
+        setTimeout(() => actualizarDots(false), 800);
+      }
+    } catch(e) {
+      document.getElementById('pin-cargando').textContent = '';
+      document.getElementById('pin-error').textContent = 'Error de conexión';
+      pinActual = '';
+    }
+  }
+
+  // Soporte teclado físico para el PIN
+  document.addEventListener('keydown', function(e) {
+    const screen = document.getElementById('pin-screen');
+    if (screen.classList.contains('oculto')) return;
+    if (e.key >= '0' && e.key <= '9') pinIngresa(parseInt(e.key));
+    if (e.key === 'Backspace') pinBorrar();
+  });
+
   // ── Init ─────────────────────────────────────────────────
-  initHeader();
-  cargarDatos();
+  // No cargamos datos hasta que el PIN sea correcto
 </script>
 </body>
 </html>
