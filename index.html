@@ -23,6 +23,60 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; }
 
+    /* ── Menú selección módulo ── */
+    #menu-screen {
+      position: fixed; inset: 0; background: var(--bg);
+      display: none; align-items: center; justify-content: center;
+      z-index: 998;
+    }
+    #menu-screen.visible { display: flex; }
+    .menu-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 2.5rem 2rem;
+      width: 340px; max-width: 90vw;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+      text-align: center;
+    }
+    .menu-card h2 { font-family: 'DM Serif Display', serif; font-size: 22px; font-weight: 400; margin-bottom: 6px; }
+    .menu-card p  { font-size: 13px; color: var(--muted); margin-bottom: 2rem; }
+    .menu-btns { display: flex; flex-direction: column; gap: 12px; }
+    .menu-btn {
+      padding: 16px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--bg); font-family: 'DM Serif Display', serif;
+      font-size: 18px; cursor: pointer; color: var(--text);
+      transition: background .15s, border-color .15s, transform .1s;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .menu-btn:hover  { background: var(--acc-bg); border-color: var(--accent); color: var(--accent); }
+    .menu-btn:active { transform: scale(.97); }
+    .menu-btn .micon { font-size: 22px; }
+
+    /* ── Módulo gastos ── */
+    #gastos-screen { display: none; }
+    #gastos-screen.visible { display: block; }
+    #ventas-screen { display: block; }
+    #ventas-screen.oculto { display: none; }
+
+    .nav-back {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 13px; color: var(--muted); cursor: pointer;
+      padding: 6px 0; background: none; border: none;
+      font-family: 'DM Sans', sans-serif;
+      transition: color .15s;
+    }
+    .nav-back:hover { color: var(--accent); }
+
+    .select-field select {
+      width: 100%; padding: 9px 12px;
+      border: 1px solid var(--border); border-radius: 8px;
+      font-family: 'DM Sans', sans-serif; font-size: 15px;
+      color: var(--text); background: var(--bg); outline: none;
+      transition: border-color .15s; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237A7770' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center;
+    }
+    .select-field select:focus { border-color: var(--accent); background-color: #fff; }
+
     /* ── Pantalla PIN ── */
     #pin-screen {
       position: fixed; inset: 0; background: var(--bg);
@@ -206,6 +260,119 @@
   </div>
 </div>
 
+<!-- MENÚ SELECCIÓN -->
+<div id="menu-screen">
+  <div class="menu-card">
+    <h2>¿Qué deseas hacer?</h2>
+    <p>Selecciona un módulo para continuar</p>
+    <div class="menu-btns">
+      <button class="menu-btn" onclick="irAVentas()">
+        <span class="micon">💰</span> Ingresar ventas
+      </button>
+      <button class="menu-btn" onclick="irAGastos()">
+        <span class="micon">🧾</span> Ingresar gastos
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MÓDULO GASTOS -->
+<div id="gastos-screen">
+  <header>
+    <button class="nav-back" onclick="volverMenu()">← Menú</button>
+    <h1>Gastos</h1>
+    <span id="header-fecha-g"></span>
+  </header>
+  <div class="layout">
+    <!-- FORMULARIO GASTOS -->
+    <div class="form-card">
+      <h2>Nuevo gasto</h2>
+      <div class="field"><label>Fecha</label><input type="date" id="g-fecha" /></div>
+      <div class="field"><label>Nombre del gasto</label><input type="text" id="g-nombre" placeholder="Ej. Insumos, Renta..." autocomplete="off" /></div>
+      <div class="field select-field"><label>Forma de pago</label>
+        <select id="g-formapago">
+          <option value="">Selecciona...</option>
+          <option value="Efectivo">Efectivo</option>
+          <option value="Tarjeta">Tarjeta</option>
+          <option value="Transferencia">Transferencia</option>
+        </select>
+      </div>
+      <div class="field"><label>Cantidad</label><input type="text" inputmode="decimal" id="g-cantidad" placeholder="0" autocomplete="off" /></div>
+      <div class="field"><label>Nota</label><input type="text" id="g-nota" placeholder="Opcional..." autocomplete="off" /></div>
+      <button class="btn-primary" id="btn-guardar-g" onclick="abrirModalGasto()">Guardar</button>
+      <div class="status" id="status-msg-g"></div>
+    </div>
+
+    <!-- PANEL DERECHO GASTOS -->
+    <div class="right-panel">
+      <!-- RESUMEN GASTOS -->
+      <div class="resumen-card">
+        <div class="tabs">
+          <button class="tab active" onclick="setTabG('semana')">Esta semana</button>
+          <button class="tab"        onclick="setTabG('quincena')">Quincena</button>
+          <button class="tab"        onclick="setTabG('mes')">Este mes</button>
+          <button class="tab"        onclick="setTabG('custom')">Personalizado</button>
+        </div>
+        <div class="resumen-body">
+          <div class="periodo-label" id="periodo-label-g"></div>
+          <div id="custom-inputs-g" style="display:none;margin-bottom:12px;">
+            <div class="custom-range">
+              <input type="date" id="rango-desde-g" />
+              <span style="color:var(--muted);font-size:13px">al</span>
+              <input type="date" id="rango-hasta-g" />
+              <button class="btn-buscar" onclick="renderResumenG()">Buscar</button>
+            </div>
+          </div>
+          <div class="resumen-grid">
+            <div class="rmetric rmetric-destacado"><div class="rl">Total gastos</div><div class="rv green" id="rg-total">—</div></div>
+            <div class="rmetric"><div class="rl">Días con gasto</div><div class="rv" id="rg-dias">—</div></div>
+            <div class="rmetric"><div class="rl">Efectivo</div><div class="rv" id="rg-efectivo">—</div></div>
+            <div class="rmetric"><div class="rl">Tarjeta</div><div class="rv" id="rg-tarjeta">—</div></div>
+            <div class="rmetric" style="grid-column:1/-1"><div class="rl">Transferencia</div><div class="rv" id="rg-transfer">—</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABLA GASTOS -->
+      <div class="table-card">
+        <div class="table-header">
+          <h2>Últimos gastos</h2>
+          <button class="btn-csv" onclick="exportGastosCSV()">Exportar CSV</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th><th>Nombre</th><th>Forma pago</th><th>Cantidad</th><th>Nota</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="tbody-g">
+              <tr><td colspan="6" style="text-align:center;padding:2rem;color:#7A7770;font-size:13px"><span class="spin"></span>Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMACIÓN GASTO -->
+<div class="modal-overlay" id="modal-overlay-g">
+  <div class="modal">
+    <h3>Confirmar gasto</h3>
+    <div class="modal-row"><span class="ml">Fecha</span>       <span class="mv" id="mg-fecha"></span></div>
+    <div class="modal-row"><span class="ml">Nombre</span>      <span class="mv" id="mg-nombre"></span></div>
+    <div class="modal-row"><span class="ml">Forma de pago</span><span class="mv" id="mg-formapago"></span></div>
+    <div class="modal-row"><span class="ml">Cantidad</span>    <span class="mv" id="mg-cantidad"></span></div>
+    <div class="modal-row"><span class="ml">Nota</span>        <span class="mv" id="mg-nota"></span></div>
+    <div class="modal-total"><span>Total</span><span id="mg-total"></span></div>
+    <div class="modal-btns">
+      <button class="btn-cancel"  onclick="cerrarModalG()">Corregir</button>
+      <button class="btn-confirm" onclick="confirmarGasto()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL -->
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal">
@@ -223,6 +390,7 @@
   </div>
 </div>
 
+<div id="ventas-screen" class="oculto">
 <header>
   <h1>Registro de ventas</h1>
   <span id="header-fecha"></span>
@@ -347,8 +515,10 @@
   </div>
 </div>
 
+</div><!-- /ventas-screen -->
+
 <script>
-  const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbwJ1bFwvZEvEMBGTSofHFDGzCvasUPHpUUJ9y0x5vpK6cg_ui5I5KmKuLaaYdwUGqZt/exec";
+  const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbzCwZB3npIooDojJzHstRRWg3k3k0IieYKUn8WpU6ysZZrMg4SSm3CsshakoJVWCcY/exec";
   const COMISION_TARJETA = 0.035;
   const COMISION_RAPPI   = 0.18;
 
@@ -731,8 +901,7 @@
       document.getElementById('pin-cargando').textContent = '';
       if (data.ok && data.acceso) {
         document.getElementById('pin-screen').classList.add('oculto');
-        initHeader();
-        cargarDatos();
+        document.getElementById('menu-screen').classList.add('visible');
       } else {
         actualizarDots(true);
         document.getElementById('pin-error').textContent = 'PIN incorrecto, intenta de nuevo';
@@ -753,6 +922,227 @@
     if (e.key >= '0' && e.key <= '9') pinIngresa(parseInt(e.key));
     if (e.key === 'Backspace') pinBorrar();
   });
+
+  // ── Navegación entre módulos ────────────────────────────
+  function irAVentas() {
+    document.getElementById('menu-screen').classList.remove('visible');
+    document.getElementById('ventas-screen').classList.remove('oculto');
+    document.getElementById('gastos-screen').classList.remove('visible');
+    initHeader();
+    cargarDatos();
+  }
+
+  function irAGastos() {
+    document.getElementById('menu-screen').classList.remove('visible');
+    document.getElementById('gastos-screen').classList.add('visible');
+    document.getElementById('ventas-screen').classList.add('oculto');
+    initHeaderG();
+    cargarGastos();
+  }
+
+  function volverMenu() {
+    document.getElementById('gastos-screen').classList.remove('visible');
+    document.getElementById('ventas-screen').classList.add('oculto');
+    document.getElementById('menu-screen').classList.add('visible');
+  }
+
+  // ── GASTOS — lógica completa ─────────────────────────────
+  let gastosRows = [];
+  let gastoParaGuardar = null;
+  let tabG = 'semana';
+
+  function initHeaderG() {
+    const hoy = new Date();
+    const el = document.getElementById('header-fecha-g');
+    if (el) el.textContent = hoy.toLocaleDateString('es-MX', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+    document.getElementById('g-fecha').value = dateToIso(hoy);
+  }
+
+  function setTabG(tab) {
+    tabG = tab;
+    document.querySelectorAll('#gastos-screen .tab').forEach((t,i) => {
+      t.classList.toggle('active', ['semana','quincena','mes','custom'][i] === tab);
+    });
+    document.getElementById('custom-inputs-g').style.display = tab === 'custom' ? 'block' : 'none';
+    renderResumenG();
+  }
+
+  function abrirModalGasto() {
+    const fecha     = document.getElementById('g-fecha').value;
+    const nombre    = document.getElementById('g-nombre').value.trim();
+    const formaPago = document.getElementById('g-formapago').value;
+    const cantidad  = parseFloat(document.getElementById('g-cantidad').value) || 0;
+    const nota      = document.getElementById('g-nota').value.trim();
+
+    const statusG = document.getElementById('status-msg-g');
+    if (!fecha)    { statusG.textContent = 'Ingresa una fecha.'; statusG.className='status error'; return; }
+    if (!nombre)   { statusG.textContent = 'Ingresa el nombre del gasto.'; statusG.className='status error'; return; }
+    if (!formaPago){ statusG.textContent = 'Selecciona forma de pago.'; statusG.className='status error'; return; }
+    if (!cantidad) { statusG.textContent = 'Ingresa una cantidad.'; statusG.className='status error'; return; }
+    statusG.textContent = ''; statusG.className = 'status';
+
+    gastoParaGuardar = { fecha, nombre, formaPago, cantidad, nota };
+    document.getElementById('mg-fecha').textContent    = labelFecha(fecha);
+    document.getElementById('mg-nombre').textContent   = nombre;
+    document.getElementById('mg-formapago').textContent= formaPago;
+    document.getElementById('mg-cantidad').textContent = fmt(cantidad);
+    document.getElementById('mg-nota').textContent     = nota || '—';
+    document.getElementById('mg-total').textContent    = fmt(cantidad);
+    document.getElementById('modal-overlay-g').classList.add('visible');
+  }
+
+  function cerrarModalG() {
+    document.getElementById('modal-overlay-g').classList.remove('visible');
+    gastoParaGuardar = null;
+  }
+
+  async function confirmarGasto() {
+    if (!gastoParaGuardar) return;
+    const g = { ...gastoParaGuardar };
+    cerrarModalG();
+    const btn = document.getElementById('btn-guardar-g');
+    btn.disabled = true; btn.textContent = 'Guardando...';
+
+    try {
+      const params = new URLSearchParams({ accion:'agregarGasto', ...g });
+      const res  = await fetch(SCRIPT_URL + '?' + params.toString(), { method:'GET' });
+      const data = await res.json();
+      const statusG = document.getElementById('status-msg-g');
+      if (data.ok) {
+        statusG.textContent = 'Gasto guardado correctamente.'; statusG.className = 'status';
+        ['g-nombre','g-cantidad','g-nota'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('g-formapago').value = '';
+        await cargarGastos();
+      } else {
+        statusG.textContent = 'Error: ' + (data.error || ''); statusG.className = 'status error';
+      }
+    } catch(e) {
+      document.getElementById('status-msg-g').textContent = 'Error de conexión.';
+      document.getElementById('status-msg-g').className = 'status error';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Guardar';
+      gastoParaGuardar = null;
+    }
+  }
+
+  async function cargarGastos() {
+    try {
+      const res  = await fetch(SCRIPT_URL + '?accion=listarGastos', { method:'GET' });
+      const data = await res.json();
+      if (data.ok) {
+        gastosRows = data.datos.filter(r => r && r.fecha && /^\d{4}-\d{2}-\d{2}$/.test(r.fecha));
+        renderGastos();
+        renderResumenG();
+      } else {
+        document.getElementById('tbody-g').innerHTML =
+          `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--danger);font-size:13px">${data.error}</td></tr>`;
+      }
+    } catch(e) {
+      document.getElementById('tbody-g').innerHTML =
+        '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--danger);font-size:13px">Error de conexión</td></tr>';
+    }
+  }
+
+  async function eliminarGasto(id) {
+    if (!confirm('¿Eliminar este gasto?')) return;
+    try {
+      const res  = await fetch(SCRIPT_URL + '?accion=eliminarGasto&id=' + encodeURIComponent(id), { method:'GET' });
+      const data = await res.json();
+      if (data.ok) await cargarGastos();
+      else alert('No se pudo eliminar: ' + (data.error || ''));
+    } catch(e) { alert('Error de conexión.'); }
+  }
+
+  function renderGastos() {
+    const tbody = document.getElementById('tbody-g');
+    tbody.innerHTML = '';
+    if (!gastosRows.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2.5rem;color:#7A7770;font-size:13px">Sin gastos aún</td></tr>';
+      return;
+    }
+    [...gastosRows].reverse().slice(0, 7).forEach(g => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${labelFecha(g.fecha)}</td>
+        <td>${g.nombre}</td>
+        <td>${g.formaPago}</td>
+        <td>${fmtN(g.cantidad)}</td>
+        <td style="color:var(--muted);font-size:12px">${g.nota || '—'}</td>
+        <td style="text-align:center"><button class="btn-corregir" onclick="corregirGasto('${g.id}')">Corregir</button></td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function corregirGasto(id) {
+    const g = gastosRows.find(x => x.id === id);
+    if (!g) return;
+    document.getElementById('g-fecha').value      = g.fecha;
+    document.getElementById('g-nombre').value     = g.nombre;
+    document.getElementById('g-formapago').value  = g.formaPago;
+    document.getElementById('g-cantidad').value   = g.cantidad;
+    document.getElementById('g-nota').value       = g.nota || '';
+    gastoParaGuardar = { ...g }; // guarda el id para actualizar
+    document.querySelector('#gastos-screen .form-card').scrollIntoView({ behavior:'smooth', block:'start' });
+    const statusG = document.getElementById('status-msg-g');
+    statusG.textContent = 'Editando gasto del ' + labelFecha(g.fecha); statusG.className = 'status';
+  }
+
+  function renderResumenG() {
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    let desde, hasta;
+
+    if (tabG === 'semana') {
+      const dia = hoy.getDay();
+      const diff = (dia === 0) ? -6 : 1 - dia;
+      desde = new Date(hoy); desde.setDate(hoy.getDate() + diff);
+      hasta = new Date(desde); hasta.setDate(desde.getDate() + 6);
+    } else if (tabG === 'quincena') {
+      const d = hoy.getDate(), y = hoy.getFullYear(), m = hoy.getMonth();
+      desde = d <= 15 ? new Date(y,m,1)  : new Date(y,m,16);
+      hasta = d <= 15 ? new Date(y,m,15) : new Date(y,m+1,0);
+    } else if (tabG === 'mes') {
+      desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+      hasta = new Date(hoy.getFullYear(), hoy.getMonth()+1, 0);
+    } else {
+      desde = isoADate(document.getElementById('rango-desde-g').value);
+      hasta = isoADate(document.getElementById('rango-hasta-g').value);
+      if (!desde || !hasta) {
+        document.getElementById('periodo-label-g').textContent = 'Selecciona un rango';
+        return;
+      }
+    }
+
+    const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    const fmtD = d => `${d.getDate()} ${meses[d.getMonth()]} ${d.getFullYear()}`;
+    document.getElementById('periodo-label-g').textContent = `${fmtD(desde)} — ${fmtD(hasta)}`;
+
+    const filtradas = gastosRows.filter(g => {
+      const f = isoADate(g.fecha);
+      return f && f >= desde && f <= hasta;
+    });
+
+    const total     = filtradas.reduce((a,g) => a + g.cantidad, 0);
+    const efectivo  = filtradas.filter(g => g.formaPago==='Efectivo').reduce((a,g) => a+g.cantidad, 0);
+    const tarjeta   = filtradas.filter(g => g.formaPago==='Tarjeta').reduce((a,g) => a+g.cantidad, 0);
+    const transfer  = filtradas.filter(g => g.formaPago==='Transferencia').reduce((a,g) => a+g.cantidad, 0);
+    const dias      = new Set(filtradas.map(g => g.fecha)).size;
+
+    document.getElementById('rg-total').textContent    = fmt(total);
+    document.getElementById('rg-dias').textContent     = dias;
+    document.getElementById('rg-efectivo').textContent = fmt(efectivo);
+    document.getElementById('rg-tarjeta').textContent  = fmt(tarjeta);
+    document.getElementById('rg-transfer').textContent = fmt(transfer);
+  }
+
+  function exportGastosCSV() {
+    if (!gastosRows.length) { alert('No hay gastos para exportar.'); return; }
+    const h = ['ID','Fecha','Nombre','FormaPago','Cantidad','Nota'];
+    const b = gastosRows.map(g => [g.id,g.fecha,g.nombre,g.formaPago,g.cantidad,g.nota].join(','));
+    const blob = new Blob([h.join(',')+'
+'+b.join('
+')],{type:'text/csv'});
+    const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='gastos.csv'; a.click();
+  }
 
   // ── Init ─────────────────────────────────────────────────
   // No cargamos datos hasta que el PIN sea correcto
