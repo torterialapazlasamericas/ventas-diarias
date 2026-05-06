@@ -56,8 +56,29 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .nav-back:hover{color:var(--accent);}
 
 .layout{max-width:980px;margin:0 auto;padding:2rem 1.5rem;display:grid;grid-template-columns:290px 1fr;gap:1.5rem;align-items:start;}
-@media(max-width:700px){.layout{grid-template-columns:1fr;padding:1rem;}.mod-header{padding:1rem;}}
+@media(max-width:700px){
+  .layout{grid-template-columns:1fr;padding:.75rem;gap:.75rem;}
+  .mod-header{padding:.75rem 1rem;}
+  .form-card{position:static;padding:1rem;}
+  .resumen-card,.table-card{border-radius:8px;}
+  .right-panel{gap:.75rem;}
+  table{font-size:12px;}
+  th,td{padding:6px 8px;}
+  .resumen-grid{grid-template-columns:1fr 1fr;gap:8px;}
+  .rmetric{padding:.6rem .75rem;}
+  .rv{font-size:17px;}
+  .ganancia-val{font-size:28px;}
+  header h1{font-size:18px;}
+}
 
+/* ── Cámara / Foto ── */
+.foto-area{margin-top:.75rem;}
+.btn-camara{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px;border:1.5px dashed var(--border);border-radius:8px;background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;transition:border-color .15s,color .15s;}
+.btn-camara:hover{border-color:var(--accent);color:var(--accent);}
+.foto-preview{margin-top:8px;display:none;position:relative;}
+.foto-preview img{width:100%;border-radius:8px;border:1px solid var(--border);max-height:180px;object-fit:cover;}
+.foto-preview .foto-del{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.5);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.foto-label{font-size:11px;color:var(--muted);margin-top:4px;text-align:center;}
 /* ── FORM ── */
 .form-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;box-shadow:var(--shadow);position:sticky;top:1.5rem;}
 .form-card h2{font-family:'DM Serif Display',serif;font-size:17px;font-weight:400;margin-bottom:1.25rem;}
@@ -74,8 +95,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .status.error{color:var(--danger);}
 
 /* ── CHIPS ── */
-.chips-wrap{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:8px;}
-.chip{padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;transition:background .15s,border-color .15s,color .15s;white-space:nowrap;}
+.chips-wrap{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:8px;}
+.chip{padding:8px 6px;border-radius:10px;border:1px solid var(--border);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;transition:background .15s,border-color .15s,color .15s;text-align:center;width:100%;white-space:nowrap;}
 .chip:hover{background:var(--acc-bg);border-color:var(--accent);color:var(--accent);}
 .chip.activo{background:var(--accent);border-color:var(--accent);color:#fff;}
 
@@ -249,6 +270,18 @@ tbody tr{animation:fadeIn .2s ease;}
       <div class="field"><label>Tarjeta</label><input type="text" inputmode="decimal" id="v-tarjeta" placeholder="0" autocomplete="off"/></div>
       <div class="field"><label>Transferencia</label><input type="text" inputmode="decimal" id="v-transfer" placeholder="0" autocomplete="off"/></div>
       <div class="field"><label>Rappi</label><input type="text" inputmode="decimal" id="v-rappi" placeholder="0" autocomplete="off"/></div>
+      <!-- Foto nota de venta -->
+      <div class="foto-area">
+        <input type="file" id="foto-input-v" accept="image/*" capture="environment" style="display:none" onchange="previsualizarFoto('v')"/>
+        <button type="button" class="btn-camara" onclick="document.getElementById('foto-input-v').click()">
+          📷 Adjuntar foto de nota
+        </button>
+        <div class="foto-preview" id="foto-preview-v">
+          <img id="foto-img-v" src="" alt="Foto nota"/>
+          <button class="foto-del" onclick="quitarFoto('v')" title="Quitar foto">✕</button>
+          <div class="foto-label" id="foto-label-v"></div>
+        </div>
+      </div>
       <button class="btn-primary" id="btn-v" onclick="abrirModalVenta()">Guardar</button>
       <div class="status" id="status-v"></div>
     </div>
@@ -341,6 +374,18 @@ tbody tr{animation:fadeIn .2s ease;}
       </div>
       <div class="field"><label>Cantidad</label><input type="text" inputmode="decimal" id="g-cantidad" placeholder="0" autocomplete="off"/></div>
       <div class="field"><label>Nota</label><input type="text" id="g-nota" placeholder="Opcional..." autocomplete="off"/></div>
+      <!-- Foto nota de gasto -->
+      <div class="foto-area">
+        <input type="file" id="foto-input-g" accept="image/*" capture="environment" style="display:none" onchange="previsualizarFoto('g')"/>
+        <button type="button" class="btn-camara" onclick="document.getElementById('foto-input-g').click()">
+          📷 Adjuntar foto de nota
+        </button>
+        <div class="foto-preview" id="foto-preview-g">
+          <img id="foto-img-g" src="" alt="Foto nota"/>
+          <button class="foto-del" onclick="quitarFoto('g')" title="Quitar foto">✕</button>
+          <div class="foto-label" id="foto-label-g"></div>
+        </div>
+      </div>
       <button class="btn-primary" id="btn-g" onclick="abrirModalGasto()">Guardar</button>
       <div class="status" id="status-g"></div>
     </div>
@@ -441,7 +486,7 @@ tbody tr{animation:fadeIn .2s ease;}
 </div>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzCwZB3npIooDojJzHstRRWg3k3k0IieYKUn8WpU6ysZZrMg4SSm3CsshakoJVWCcY/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby2wGnGcN8R0SoagVhHEL2KhWdIe3qJoBuj55xkNJQ6Iijph5S6F0rfj0yme-QBBGMl/exec";
 const C_TARJETA = 0.035, C_RAPPI = 0.18;
 
 let ventasRows = [], gastosRows = [];
@@ -612,6 +657,11 @@ async function confirmarVenta() {
     const j = await r.json();
     const st=document.getElementById('status-v');
     if (j.ok) {
+      if (fotoDataV) {
+        st.textContent='Guardando foto...'; st.className='status';
+        await subirFoto(fotoDataV, d.fecha, 'ventas', d.fecha);
+        quitarFoto('v');
+      }
       st.textContent=j.accion==='actualizado'?'Registro actualizado.':'Guardado correctamente.'; st.className='status';
       ['v-efectivo','v-tarjeta','v-transfer','v-rappi'].forEach(id=>document.getElementById(id).value='');
       await cargarVentas();
@@ -772,6 +822,11 @@ async function confirmarGasto() {
     const j=await r.json();
     const st=document.getElementById('status-g');
     if(j.ok){
+      if (fotoDataG) {
+        st.textContent='Guardando foto...';st.className='status';
+        await subirFoto(fotoDataG, d.fecha, 'gastos', d.nombre||d.fecha);
+        quitarFoto('g');
+      }
       st.textContent='Gasto guardado.';st.className='status';
       ['g-nombre','g-cantidad','g-nota'].forEach(id=>document.getElementById(id).value='');
       document.getElementById('g-fpago').value='';
@@ -852,6 +907,76 @@ function exportGastosCSV() {
   const b=gastosRows.map(g=>[g.id,g.fecha,g.nombre,g.formaPago,g.cantidad,g.nota].join(','));
   const blob=new Blob([h.join(',')+'\n'+b.join('\n')],{type:'text/csv'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='gastos.csv';a.click();
+}
+
+// ══════════════════════ CÁMARA / FOTOS ════════════════════════
+let fotoDataV = null;  // base64 de la foto de venta
+let fotoDataG = null;  // base64 de la foto de gasto
+
+function previsualizarFoto(modulo) {
+  const input   = document.getElementById('foto-input-' + modulo);
+  const preview = document.getElementById('foto-preview-' + modulo);
+  const img     = document.getElementById('foto-img-' + modulo);
+  const label   = document.getElementById('foto-label-' + modulo);
+  const file    = input.files[0];
+  if (!file) return;
+
+  // Comprimir a max 800px y calidad 0.7 para no sobrecargar el Apps Script
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const original = e.target.result;
+    const image = new Image();
+    image.onload = function() {
+      const canvas = document.createElement('canvas');
+      const MAX = 800;
+      let w = image.width, h = image.height;
+      if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+      if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(image, 0, 0, w, h);
+      const compressed = canvas.toDataURL('image/jpeg', 0.7);
+      if (modulo === 'v') fotoDataV = compressed;
+      else                fotoDataG = compressed;
+      img.src = compressed;
+      preview.style.display = 'block';
+      label.textContent = file.name + ' — ' + Math.round(compressed.length / 1024) + ' KB';
+    };
+    image.src = original;
+  };
+  reader.readAsDataURL(file);
+}
+
+function quitarFoto(modulo) {
+  document.getElementById('foto-input-' + modulo).value = '';
+  document.getElementById('foto-img-' + modulo).src = '';
+  document.getElementById('foto-preview-' + modulo).style.display = 'none';
+  document.getElementById('foto-label-' + modulo).textContent = '';
+  if (modulo === 'v') fotoDataV = null;
+  else                fotoDataG = null;
+}
+
+async function subirFoto(fotoBase64, fecha, tipo, referencia) {
+  // tipo: 'ventas' o 'gastos', referencia: fecha o nombre del gasto
+  if (!fotoBase64) return null;
+  try {
+    // Extraer solo el base64 sin el prefijo data:image/jpeg;base64,
+    const base64 = fotoBase64.split(',')[1];
+    const params = new URLSearchParams({
+      accion:     'subirFoto',
+      base64:     base64,
+      fecha:      fecha,
+      tipo:       tipo,
+      referencia: referencia
+    });
+    const res  = await fetch(SCRIPT_URL + '?' + params.toString(), { method: 'GET' });
+    const data = await res.json();
+    if (data.ok) return data.url;
+    console.warn('Foto no subida:', data.error);
+    return null;
+  } catch(e) {
+    console.warn('Error subiendo foto:', e.message);
+    return null;
+  }
 }
 
 // ══════════════════════ ANÁLISIS ══════════════════════════════
