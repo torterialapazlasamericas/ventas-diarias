@@ -66,6 +66,21 @@
     }
     .nav-back:hover { color: var(--accent); }
 
+    /* ── Chips nombre gasto ── */
+    .gastos-chips {
+      display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 4px;
+    }
+    .chip {
+      padding: 5px 12px; border-radius: 20px;
+      border: 1px solid var(--border); background: var(--bg);
+      font-family: 'DM Sans', sans-serif; font-size: 13px;
+      color: var(--muted); cursor: pointer;
+      transition: background .15s, border-color .15s, color .15s;
+      white-space: nowrap;
+    }
+    .chip:hover  { background: var(--acc-bg); border-color: var(--accent); color: var(--accent); }
+    .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
     .select-field select {
       width: 100%; padding: 9px 12px;
       border: 1px solid var(--border); border-radius: 8px;
@@ -288,7 +303,26 @@
     <div class="form-card">
       <h2>Nuevo gasto</h2>
       <div class="field"><label>Fecha</label><input type="date" id="g-fecha" /></div>
-      <div class="field"><label>Nombre del gasto</label><input type="text" id="g-nombre" placeholder="Ej. Insumos, Renta..." autocomplete="off" /></div>
+      <div class="field">
+        <label>Nombre del gasto</label>
+        <div class="gastos-chips" id="gastos-chips">
+          <button type="button" class="chip" data-val="Pan">Pan</button>
+          <button type="button" class="chip" data-val="Chedraui">Chedraui</button>
+          <button type="button" class="chip" data-val="Coca">Coca</button>
+          <button type="button" class="chip" data-val="Agua Cristal">Agua Cristal</button>
+          <button type="button" class="chip" data-val="Uber">Uber</button>
+          <button type="button" class="chip" data-val="Leche">Leche</button>
+          <button type="button" class="chip" data-val="Sueldo">Sueldo</button>
+          <button type="button" class="chip" data-val="Gasolina">Gasolina</button>
+          <button type="button" class="chip" data-val="Desechables">Desechables</button>
+          <button type="button" class="chip" data-val="Quesos">Quesos</button>
+          <button type="button" class="chip" data-val="Costeña">Costeña</button>
+          <button type="button" class="chip" data-val="Carne">Carne</button>
+          <button type="button" class="chip" data-val="Verdura">Verdura</button>
+          <button type="button" class="chip" data-val="Pago Propina o Envío">Pago Propina o Envío</button>
+        </div>
+        <input type="text" id="g-nombre" placeholder="O escribe aquí si no está en la lista..." autocomplete="off" style="margin-top:8px" />
+      </div>
       <div class="field select-field"><label>Forma de pago</label>
         <select id="g-formapago">
           <option value="">Selecciona...</option>
@@ -518,7 +552,7 @@
 </div><!-- /ventas-screen -->
 
 <script>
-  const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbzCwZB3npIooDojJzHstRRWg3k3k0IieYKUn8WpU6ysZZrMg4SSm3CsshakoJVWCcY/exec";
+  const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbzJK96C2VAV-O2ekhJ8VrW6sRTDLYG7CMk1iLi7Q_OcEoiGFmjCwHnjZboCZ2IMjzns/exec";
   const COMISION_TARJETA = 0.035;
   const COMISION_RAPPI   = 0.18;
 
@@ -915,6 +949,23 @@
     }
   }
 
+  // ── Chips de nombre de gasto ────────────────────────────
+  document.getElementById('gastos-chips').addEventListener('click', function(e) {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    const val = chip.getAttribute('data-val');
+    // Toggle chip activo
+    document.querySelectorAll('#gastos-chips .chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    // Poner valor en el input y limpiar si el usuario ya escribía algo
+    document.getElementById('g-nombre').value = val;
+  });
+
+  // Si el usuario escribe manualmente, desactivar chips
+  document.getElementById('g-nombre').addEventListener('input', function() {
+    document.querySelectorAll('#gastos-chips .chip').forEach(c => c.classList.remove('active'));
+  });
+
   // Event delegation para el teclado PIN en pantalla
   document.getElementById('pin-teclado').addEventListener('click', function(e) {
     const btn = e.target.closest('[data-pin]');
@@ -1021,6 +1072,7 @@
         statusG.textContent = 'Gasto guardado correctamente.'; statusG.className = 'status';
         ['g-nombre','g-cantidad','g-nota'].forEach(id => document.getElementById(id).value = '');
         document.getElementById('g-formapago').value = '';
+        document.querySelectorAll('#gastos-chips .chip').forEach(c => c.classList.remove('active'));
         await cargarGastos();
       } else {
         statusG.textContent = 'Error: ' + (data.error || ''); statusG.className = 'status error';
