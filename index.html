@@ -487,7 +487,7 @@ tbody tr{animation:fadeIn .2s ease;}
 </div>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxOMiTtzatfWMxJ5ljfuOPcESjUoDo7nZnv9wgWKDivs1yqNwwAgHSbe_2vqewtTyMe/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyU7gXYHShD2WP3PzRsVgfZUKcpF9kazO1wOqkU9pYdgYmRPNc1_9m8ndMBhGwBSqWN/exec";
 const C_TARJETA = 0.035, C_RAPPI = 0.18;
 
 let ventasRows = [], gastosRows = [];
@@ -967,16 +967,42 @@ async function subirFoto(fotoBase64, fecha, tipo, referencia) {
   if (!fotoBase64) return null;
   try {
     const base64 = fotoBase64.split(',')[1];
-    // Usar POST para enviar el base64 — GET tiene límite de URL (~8KB)
-    const res  = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accion: 'subirFoto', base64, fecha, tipo, referencia })
+    // Apps Script no permite CORS en POST desde dominios externos.
+    // Usamos un iframe oculto con un form POST — el script recibe los datos
+    // aunque no podamos leer la respuesta directamente.
+    await new Promise((resolve) => {
+      const iframe = document.createElement('iframe');
+      iframe.name = 'foto-frame-' + Date.now();
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = SCRIPT_URL;
+      form.target = iframe.name;
+      form.style.display = 'none';
+
+      const campos = { accion: 'subirFoto', base64, fecha, tipo, referencia };
+      Object.entries(campos).forEach(([k, v]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = k;
+        input.value = v;
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+      iframe.onload = () => {
+        setTimeout(() => {
+          form.remove();
+          iframe.remove();
+          resolve();
+        }, 500);
+      };
+      setTimeout(resolve, 8000); // timeout de seguridad
+      form.submit();
     });
-    const data = await res.json();
-    if (data.ok) return data.url;
-    console.warn('Foto no subida:', data.error);
-    return null;
+    return 'enviado';
   } catch(e) {
     console.warn('Error subiendo foto:', e.message);
     return null;
