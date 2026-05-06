@@ -287,6 +287,9 @@
       <button class="menu-btn" onclick="irAGastos()">
         <span class="micon">🧾</span> Ingresar gastos
       </button>
+      <button class="menu-btn" onclick="irAAnalisis()">
+        <span class="micon">📊</span> Analizar ganancias
+      </button>
     </div>
   </div>
 </div>
@@ -307,19 +310,20 @@
         <label>Nombre del gasto</label>
         <div class="gastos-chips" id="gastos-chips">
           <button type="button" class="chip" data-val="Pan">Pan</button>
+          <button type="button" class="chip" data-val="Pago Propina o Envío">Pago Propina o Envío</button>
+          <button type="button" class="chip" data-val="Verdura">Verdura</button>
           <button type="button" class="chip" data-val="Chedraui">Chedraui</button>
-          <button type="button" class="chip" data-val="Coca">Coca</button>
-          <button type="button" class="chip" data-val="Agua Cristal">Agua Cristal</button>
-          <button type="button" class="chip" data-val="Uber">Uber</button>
+          <button type="button" class="chip" data-val="Sam's Club">Sam's Club</button>
           <button type="button" class="chip" data-val="Leche">Leche</button>
           <button type="button" class="chip" data-val="Sueldo">Sueldo</button>
-          <button type="button" class="chip" data-val="Gasolina">Gasolina</button>
+          <button type="button" class="chip" data-val="Carne">Carne</button>
+          <button type="button" class="chip" data-val="Coca">Coca</button>
           <button type="button" class="chip" data-val="Desechables">Desechables</button>
           <button type="button" class="chip" data-val="Quesos">Quesos</button>
           <button type="button" class="chip" data-val="Costeña">Costeña</button>
-          <button type="button" class="chip" data-val="Carne">Carne</button>
-          <button type="button" class="chip" data-val="Verdura">Verdura</button>
-          <button type="button" class="chip" data-val="Pago Propina o Envío">Pago Propina o Envío</button>
+          <button type="button" class="chip" data-val="Agua Cristal">Agua Cristal</button>
+          <button type="button" class="chip" data-val="Gasolina">Gasolina</button>
+          <button type="button" class="chip" data-val="Uber">Uber</button>
         </div>
         <input type="text" id="g-nombre" placeholder="O escribe aquí si no está en la lista..." autocomplete="off" style="margin-top:8px" />
       </div>
@@ -426,6 +430,7 @@
 
 <div id="ventas-screen" class="oculto">
 <header>
+  <button class="nav-back" onclick="volverMenu()">← Menú</button>
   <h1>Registro de ventas</h1>
   <span id="header-fecha"></span>
 </header>
@@ -550,6 +555,91 @@
 </div>
 
 </div><!-- /ventas-screen -->
+
+<!-- MÓDULO ANÁLISIS -->
+<div id="analisis-screen" style="display:none">
+  <header>
+    <button class="nav-back" onclick="volverMenu()">← Menú</button>
+    <h1>Análisis de ganancias</h1>
+    <span id="header-fecha-a"></span>
+  </header>
+  <div style="max-width:980px;margin:0 auto;padding:2rem 1.5rem">
+
+    <!-- TABS -->
+    <div class="resumen-card" style="margin-bottom:1.25rem">
+      <div class="tabs">
+        <button class="tab active" onclick="setTabA('semana')">Esta semana</button>
+        <button class="tab"        onclick="setTabA('quincena')">Quincena</button>
+        <button class="tab"        onclick="setTabA('mes')">Este mes</button>
+        <button class="tab"        onclick="setTabA('custom')">Personalizado</button>
+      </div>
+      <div class="resumen-body">
+        <div class="periodo-label" id="periodo-label-a"></div>
+        <div id="custom-inputs-a" style="display:none;margin-bottom:12px">
+          <div class="custom-range">
+            <input type="date" id="rango-desde-a" />
+            <span style="color:var(--muted);font-size:13px">al</span>
+            <input type="date" id="rango-hasta-a" />
+            <button class="btn-buscar" onclick="renderAnalisis()">Buscar</button>
+          </div>
+        </div>
+
+        <!-- Ganancia principal -->
+        <div style="background:var(--acc-bg);border-radius:10px;padding:1.25rem 1.5rem;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);margin-bottom:4px">Ganancia real</div>
+            <div style="font-family:'DM Serif Display',serif;font-size:36px;color:var(--accent)" id="a-ganancia">—</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:2px">Margen</div>
+            <div style="font-size:22px;font-weight:500;color:var(--accent)" id="a-margen">—</div>
+          </div>
+        </div>
+
+        <!-- Grid ventas vs gastos -->
+        <div class="resumen-grid" style="margin-bottom:1rem">
+          <div class="rmetric rmetric-destacado">
+            <div class="rl">Total ventas (con Rappi)</div>
+            <div class="rv blue" id="a-ventas">—</div>
+          </div>
+          <div class="rmetric rmetric-destacado">
+            <div class="rl">Total gastos</div>
+            <div class="rv" style="color:var(--danger)" id="a-gastos">—</div>
+          </div>
+          <div class="rmetric">
+            <div class="rl">Días con venta</div>
+            <div class="rv" id="a-dias-v">—</div>
+          </div>
+          <div class="rmetric">
+            <div class="rl">Días con gasto</div>
+            <div class="rv" id="a-dias-g">—</div>
+          </div>
+          <div class="rmetric">
+            <div class="rl">Promedio venta diaria</div>
+            <div class="rv" id="a-prom-v">—</div>
+          </div>
+          <div class="rmetric">
+            <div class="rl">Promedio gasto diario</div>
+            <div class="rv" id="a-prom-g">—</div>
+          </div>
+        </div>
+
+        <!-- Desglose gastos por forma de pago -->
+        <div class="resumen-divider">Gastos por forma de pago</div>
+        <div class="resumen-grid">
+          <div class="rmetric"><div class="rl">Efectivo</div><div class="rv" id="a-g-ef">—</div></div>
+          <div class="rmetric"><div class="rl">Tarjeta</div><div class="rv" id="a-g-tj">—</div></div>
+          <div class="rmetric" style="grid-column:1/-1"><div class="rl">Transferencia</div><div class="rv" id="a-g-tr">—</div></div>
+        </div>
+
+        <!-- Top gastos -->
+        <div class="resumen-divider" style="margin-top:1rem">Top gastos del período</div>
+        <div id="a-top-gastos" style="margin-top:.5rem"></div>
+
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
   const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbzCwZB3npIooDojJzHstRRWg3k3k0IieYKUn8WpU6ysZZrMg4SSm3CsshakoJVWCcY/exec";
@@ -949,21 +1039,22 @@
     }
   }
 
-  // ── Chips de nombre de gasto ────────────────────────────
-  document.getElementById('gastos-chips').addEventListener('click', function(e) {
-    const chip = e.target.closest('.chip');
+  // ── Chips de nombre de gasto (delegation a nivel documento) ─
+  document.addEventListener('click', function(e) {
+    const chip = e.target.closest('#gastos-chips .chip');
     if (!chip) return;
     const val = chip.getAttribute('data-val');
-    // Toggle chip activo
     document.querySelectorAll('#gastos-chips .chip').forEach(c => c.classList.remove('active'));
     chip.classList.add('active');
-    // Poner valor en el input y limpiar si el usuario ya escribía algo
     document.getElementById('g-nombre').value = val;
+    document.getElementById('g-nombre').focus();
   });
 
   // Si el usuario escribe manualmente, desactivar chips
-  document.getElementById('g-nombre').addEventListener('input', function() {
-    document.querySelectorAll('#gastos-chips .chip').forEach(c => c.classList.remove('active'));
+  document.addEventListener('input', function(e) {
+    if (e.target.id === 'g-nombre') {
+      document.querySelectorAll('#gastos-chips .chip').forEach(c => c.classList.remove('active'));
+    }
   });
 
   // Event delegation para el teclado PIN en pantalla
@@ -1003,7 +1094,128 @@
   function volverMenu() {
     document.getElementById('gastos-screen').classList.remove('visible');
     document.getElementById('ventas-screen').classList.add('oculto');
+    document.getElementById('analisis-screen').style.display = 'none';
     document.getElementById('menu-screen').classList.add('visible');
+  }
+
+  function irAAnalisis() {
+    document.getElementById('menu-screen').classList.remove('visible');
+    document.getElementById('ventas-screen').classList.add('oculto');
+    document.getElementById('gastos-screen').classList.remove('visible');
+    document.getElementById('analisis-screen').style.display = 'block';
+    // Cargar datos si no están cargados aún
+    if (!rows.length) cargarDatos();
+    if (!gastosRows.length) cargarGastos();
+    const hoy = new Date();
+    const el = document.getElementById('header-fecha-a');
+    if (el) el.textContent = hoy.toLocaleDateString('es-MX',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    setTabA('semana');
+  }
+
+  // ── ANÁLISIS ─────────────────────────────────────────────
+  let tabA = 'semana';
+
+  function setTabA(tab) {
+    tabA = tab;
+    document.querySelectorAll('#analisis-screen .tab').forEach((t,i) => {
+      t.classList.toggle('active', ['semana','quincena','mes','custom'][i] === tab);
+    });
+    document.getElementById('custom-inputs-a').style.display = tab === 'custom' ? 'block' : 'none';
+    renderAnalisis();
+  }
+
+  function getRangoA() {
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    if (tabA === 'semana') {
+      const dia = hoy.getDay();
+      const diff = (dia === 0) ? -6 : 1 - dia;
+      const desde = new Date(hoy); desde.setDate(hoy.getDate() + diff);
+      const hasta = new Date(desde); hasta.setDate(desde.getDate() + 6);
+      return { desde, hasta };
+    }
+    if (tabA === 'quincena') {
+      const d = hoy.getDate(), y = hoy.getFullYear(), m = hoy.getMonth();
+      return d <= 15
+        ? { desde: new Date(y,m,1),  hasta: new Date(y,m,15) }
+        : { desde: new Date(y,m,16), hasta: new Date(y,m+1,0) };
+    }
+    if (tabA === 'mes') {
+      return { desde: new Date(hoy.getFullYear(),hoy.getMonth(),1),
+               hasta: new Date(hoy.getFullYear(),hoy.getMonth()+1,0) };
+    }
+    if (tabA === 'custom') {
+      const desde = isoADate(document.getElementById('rango-desde-a').value);
+      const hasta = isoADate(document.getElementById('rango-hasta-a').value);
+      return (desde && hasta) ? { desde, hasta } : null;
+    }
+    return null;
+  }
+
+  function renderAnalisis() {
+    const rango = getRangoA();
+    if (!rango) {
+      document.getElementById('periodo-label-a').textContent = 'Selecciona un rango';
+      return;
+    }
+    const { desde, hasta } = rango;
+    const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    const fmtD  = d => `${d.getDate()} ${meses[d.getMonth()]} ${d.getFullYear()}`;
+    document.getElementById('periodo-label-a').textContent = `${fmtD(desde)} — ${fmtD(hasta)}`;
+
+    // Filtrar ventas
+    const ventas = rows.filter(r => {
+      const f = isoADate(r.fecha); return f && f >= desde && f <= hasta;
+    });
+    // Filtrar gastos
+    const gastos = gastosRows.filter(g => {
+      const f = isoADate(g.fecha); return f && f >= desde && f <= hasta;
+    });
+
+    const totalVentas = ventas.reduce((a,r) => a + (r.ventaTotalConRappi || 0), 0);
+    const totalGastos = gastos.reduce((a,g) => a + g.cantidad, 0);
+    const ganancia    = totalVentas - totalGastos;
+    const margen      = totalVentas > 0 ? ((ganancia / totalVentas) * 100).toFixed(1) + '%' : '—';
+
+    const diasV = ventas.length;
+    const diasG = new Set(gastos.map(g => g.fecha)).size;
+
+    document.getElementById('a-ganancia').textContent = fmt(ganancia);
+    document.getElementById('a-ganancia').style.color = ganancia >= 0 ? 'var(--accent)' : 'var(--danger)';
+    document.getElementById('a-margen').textContent   = margen;
+    document.getElementById('a-ventas').textContent   = fmt(totalVentas);
+    document.getElementById('a-gastos').textContent   = fmt(totalGastos);
+    document.getElementById('a-dias-v').textContent   = diasV;
+    document.getElementById('a-dias-g').textContent   = diasG;
+    document.getElementById('a-prom-v').textContent   = diasV > 0 ? fmt(totalVentas/diasV) : '$0';
+    document.getElementById('a-prom-g').textContent   = diasG > 0 ? fmt(totalGastos/diasG) : '$0';
+
+    // Gastos por forma de pago
+    const gEf = gastos.filter(g=>g.formaPago==='Efectivo').reduce((a,g)=>a+g.cantidad,0);
+    const gTj = gastos.filter(g=>g.formaPago==='Tarjeta').reduce((a,g)=>a+g.cantidad,0);
+    const gTr = gastos.filter(g=>g.formaPago==='Transferencia').reduce((a,g)=>a+g.cantidad,0);
+    document.getElementById('a-g-ef').textContent = fmt(gEf);
+    document.getElementById('a-g-tj').textContent = fmt(gTj);
+    document.getElementById('a-g-tr').textContent = fmt(gTr);
+
+    // Top gastos por nombre
+    const porNombre = {};
+    gastos.forEach(g => { porNombre[g.nombre] = (porNombre[g.nombre]||0) + g.cantidad; });
+    const top = Object.entries(porNombre).sort((a,b)=>b[1]-a[1]).slice(0,6);
+    const topEl = document.getElementById('a-top-gastos');
+    if (!top.length) {
+      topEl.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:.5rem 0">Sin gastos en este período</div>';
+    } else {
+      const maxVal = top[0][1];
+      topEl.innerHTML = top.map(([nombre, monto]) => `
+        <div style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px">
+            <span>${nombre}</span><span style="font-weight:500">${fmt(monto)}</span>
+          </div>
+          <div style="background:var(--border);border-radius:4px;height:6px">
+            <div style="background:var(--danger);border-radius:4px;height:6px;width:${Math.round((monto/maxVal)*100)}%"></div>
+          </div>
+        </div>`).join('');
+    }
   }
 
   // ── GASTOS — lógica completa ─────────────────────────────
