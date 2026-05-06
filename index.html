@@ -487,7 +487,7 @@ tbody tr{animation:fadeIn .2s ease;}
 </div>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzmRGZMYbNJX1LgP_1tXpRefF2UMuh1e3s5KvS_DGySLJaWCJ2Ap5VvIgii_waBxgLu/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxOMiTtzatfWMxJ5ljfuOPcESjUoDo7nZnv9wgWKDivs1yqNwwAgHSbe_2vqewtTyMe/exec";
 const C_TARJETA = 0.035, C_RAPPI = 0.18;
 
 let ventasRows = [], gastosRows = [];
@@ -964,19 +964,15 @@ function quitarFoto(modulo) {
 }
 
 async function subirFoto(fotoBase64, fecha, tipo, referencia) {
-  // tipo: 'ventas' o 'gastos', referencia: fecha o nombre del gasto
   if (!fotoBase64) return null;
   try {
-    // Extraer solo el base64 sin el prefijo data:image/jpeg;base64,
     const base64 = fotoBase64.split(',')[1];
-    const params = new URLSearchParams({
-      accion:     'subirFoto',
-      base64:     base64,
-      fecha:      fecha,
-      tipo:       tipo,
-      referencia: referencia
+    // Usar POST para enviar el base64 — GET tiene límite de URL (~8KB)
+    const res  = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accion: 'subirFoto', base64, fecha, tipo, referencia })
     });
-    const res  = await fetch(SCRIPT_URL + '?' + params.toString(), { method: 'GET' });
     const data = await res.json();
     if (data.ok) return data.url;
     console.warn('Foto no subida:', data.error);
