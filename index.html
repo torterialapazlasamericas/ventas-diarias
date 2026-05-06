@@ -487,7 +487,7 @@ tbody tr{animation:fadeIn .2s ease;}
 </div>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby2wGnGcN8R0SoagVhHEL2KhWdIe3qJoBuj55xkNJQ6Iijph5S6F0rfj0yme-QBBGMl/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx2hbkCWawWRDhDhJS1CyS0UQhSdA-duIwClBnAIzZE_QTMWeXRBkYxs5Y4FzUbfb7A/exec";
 const C_TARJETA = 0.035, C_RAPPI = 0.18;
 
 let ventasRows = [], gastosRows = [];
@@ -801,7 +801,7 @@ function abrirModalGasto() {
   if(!fpago){st.textContent='Selecciona forma de pago.';st.className='status error';return;}
   if(!cantidad){st.textContent='Ingresa una cantidad.';st.className='status error';return;}
   st.textContent='';st.className='status';
-  pendienteGasto={fecha,nombre,fpago,cantidad,nota};
+  pendienteGasto={fecha,nombre,fpago,cantidad,nota, id: gastoEditandoId};
   document.getElementById('mg-fecha').textContent   =labelFecha(fecha);
   document.getElementById('mg-nombre').textContent  =nombre;
   document.getElementById('mg-fpago').textContent   =fpago;
@@ -818,7 +818,9 @@ async function confirmarGasto() {
   const btn=document.getElementById('btn-g');
   btn.disabled=true;btn.textContent='Guardando...';
   try {
-    const p=new URLSearchParams({accion:'agregarGasto',fecha:d.fecha,nombre:d.nombre,formaPago:d.fpago,cantidad:d.cantidad,nota:d.nota||''});
+    const params={accion:'agregarGasto',fecha:d.fecha,nombre:d.nombre,formaPago:d.fpago,cantidad:d.cantidad,nota:d.nota||''};
+    if (d.id) params.id = d.id;  // si hay id, el script actualizará en vez de crear
+    const p=new URLSearchParams(params);
     const r=await fetch(SCRIPT_URL+'?'+p);
     const j=await r.json();
     const st=document.getElementById('status-g');
@@ -828,7 +830,8 @@ async function confirmarGasto() {
         await subirFoto(fotoDataG, d.fecha, 'gastos', d.nombre||d.fecha);
         quitarFoto('g');
       }
-      st.textContent='Gasto guardado.';st.className='status';
+      st.textContent= d.id ? 'Gasto actualizado.' : 'Gasto guardado.';st.className='status';
+      gastoEditandoId = null;  // limpiar id de edición
       ['g-nombre','g-cantidad','g-nota'].forEach(id=>document.getElementById(id).value='');
       document.getElementById('g-fpago').value='';
       document.querySelectorAll('#chips-gastos .chip').forEach(c=>c.classList.remove('activo'));
@@ -861,8 +864,12 @@ function renderTablaGastos() {
   });
 }
 
+// id del gasto que se está editando (null = nuevo)
+let gastoEditandoId = null;
+
 function corregirGasto(id) {
   const g=gastosRows.find(x=>x.id===id);if(!g)return;
+  gastoEditandoId = id;  // guardar para enviar al script
   document.getElementById('g-fecha').value   =g.fecha;
   document.getElementById('g-nombre').value  =g.nombre;
   document.getElementById('g-fpago').value   =g.formaPago;
@@ -873,7 +880,7 @@ function corregirGasto(id) {
   });
   document.querySelector('#gastos-screen .form-card').scrollIntoView({behavior:'smooth',block:'start'});
   const st=document.getElementById('status-g');
-  st.textContent='Editando gasto del '+labelFecha(g.fecha);st.className='status';
+  st.textContent='Editando gasto del '+labelFecha(g.fecha)+' — modifica y presiona Guardar';st.className='status';
 }
 
 async function eliminarGasto(id) {
