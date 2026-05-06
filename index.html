@@ -182,9 +182,20 @@ tbody tr{animation:fadeIn .2s ease;}
 <body>
 
 <!-- ══ PIN ══ -->
-<div id="pin-screen" class="screen activo">
-  <div class="pin-card">
+<!-- ══ LOGIN GOOGLE ══ -->
+<div id="login-screen" class="screen activo">
+  <div class="pin-card" style="text-align:center">
     <h2>Registro de ventas</h2>
+    <p style="margin-bottom:1.5rem">Inicia sesión con tu cuenta de Google para continuar</p>
+    <div id="google-btn-wrap"></div>
+    <div class="pin-msg error" id="login-msg" style="margin-top:1rem"></div>
+  </div>
+</div>
+
+<!-- ══ PIN SCREEN ══ -->
+<div id="pin-screen" class="screen">
+  <div class="pin-card">
+    <h2 id="pin-bienvenida">Bienvenido</h2>
     <p>Ingresa tu PIN de 4 dígitos</p>
     <div class="pin-dots">
       <div class="pin-dot" id="dot-0"></div>
@@ -487,7 +498,7 @@ tbody tr{animation:fadeIn .2s ease;}
 </div>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwouywQ5hbG5eI-0tMAHEKR7irImQs_a3GjIpjc_FOTYEMu2VyE8K7zsit1uXBS9n5H/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwMnsL9RAEnWuOHURZHwMJ5D9ZsTfE2CfwuNQKqbHInIpw0Fe-CtQ0Dqv8cxnKAqfc/exec";
 const C_TARJETA = 0.035, C_RAPPI = 0.18;
 
 let ventasRows = [], gastosRows = [];
@@ -563,8 +574,10 @@ function irA(screenId) {
 }
 
 // ── PIN ───────────────────────────────────────────────────────
-let pinActual = '';
-const PIN_LEN = 4;
+let pinActual    = '';
+const PIN_LEN    = 4;
+let usuarioActual = null; // { usuario, perfil, correo, token }
+let clientIdGoogle = null;
 
 document.getElementById('pin-teclado').addEventListener('click', e => {
   const btn = e.target.closest('[data-pin]');
@@ -589,16 +602,88 @@ function pintarDots(error) {
     else if (i<pinActual.length) d.classList.add('filled');
   }
 }
+// ── Google Login ────────────────────────────────────────────
+async function iniciarGoogleLogin() {
+  try {
+    // Obtener CLIENT_ID desde el Apps Script
+    const r = await fetch(SCRIPT_URL + '?accion=getClientId');
+    const d = await r.json();
+    if (!d.ok) { document.getElementById('login-msg').textContent = 'Error: ' + d.error; return; }
+    clientIdGoogle = d.clientId;
+
+    // Inicializar Google Identity Services
+    google.accounts.id.initialize({
+      client_id: clientIdGoogle,
+      callback:  onGoogleLogin,
+      auto_select: false
+    });
+    google.accounts.id.renderButton(
+      document.getElementById('google-btn-wrap'),
+      { theme: 'outline', size: 'large', text: 'signin_with', locale: 'es' }
+    );
+  } catch(e) {
+    document.getElementById('login-msg').textContent = 'Error de conexión';
+  }
+}
+
+async function onGoogleLogin(response) {
+  const msg = document.getElementById('login-msg');
+  msg.textContent = 'Verificando cuenta...';
+
+  try {
+    // Decodificar el JWT para obtener el correo
+    const payload = JSON.parse(atob(response.credential.split('.')[1]));
+    const correo  = payload.email;
+
+    // Verificar con el Apps Script que el correo está autorizado
+    const r = await fetch(SCRIPT_URL + '?accion=verificarToken&token=' + encodeURIComponent(response.credential) + '&correo=' + encodeURIComponent(correo));
+    const d = await r.json();
+
+    if (d.ok) {
+      usuarioActual = {
+        usuario: d.usuario,
+        perfil:  d.perfil,
+        correo:  d.correo,
+        token:   response.credential
+      };
+      msg.textContent = '';
+      // Ir a pantalla de PIN
+      document.getElementById('pin-bienvenida').textContent = 'Hola, ' + d.usuario;
+      irA('pin-screen');
+    } else {
+      msg.textContent = '⛔ ' + (d.error || 'Cuenta no autorizada');
+    }
+  } catch(e) {
+    msg.textContent = 'Error: ' + e.message;
+  }
+}
+
+// ── Verificar PIN ────────────────────────────────────────────
 async function verificarPin() {
   const msg = document.getElementById('pin-msg');
   msg.textContent='Verificando...'; msg.className='pin-msg info';
   try {
-    const r = await fetch(`${SCRIPT_URL}?accion=verificarPin&pin=${encodeURIComponent(pinActual)}`);
+    const correo = usuarioActual ? usuarioActual.correo : '';
+    const r = await fetch(SCRIPT_URL + '?accion=verificarPin&pin=' + encodeURIComponent(pinActual) + '&correo=' + encodeURIComponent(correo));
     const d = await r.json();
     msg.textContent=''; msg.className='pin-msg';
-    if (d.ok && d.acceso) { irA('menu-screen'); }
-    else { pintarDots(true); msg.textContent='PIN incorrecto'; msg.className='pin-msg error'; pinActual=''; setTimeout(()=>pintarDots(false),800); }
-  } catch(e) { msg.textContent='Error de conexión'; msg.className='pin-msg error'; pinActual=''; }
+    if (d.ok && d.acceso) {
+      // Actualizar datos del usuario con lo que devuelve el script
+      if (usuarioActual) {
+        usuarioActual.usuario = d.usuario;
+        usuarioActual.perfil  = d.perfil;
+      }
+      irA('menu-screen');
+    } else {
+      pintarDots(true);
+      msg.textContent = 'PIN incorrecto';
+      msg.className = 'pin-msg error';
+      pinActual = '';
+      setTimeout(()=>pintarDots(false), 800);
+    }
+  } catch(e) {
+    msg.textContent='Error de conexión'; msg.className='pin-msg error'; pinActual='';
+  }
 }
 
 // ── Modal genérico ────────────────────────────────────────────
@@ -659,7 +744,7 @@ async function confirmarVenta() {
     const st=document.getElementById('status-v');
     if (j.ok) {
       if (fotoDataV) {
-        await subirFoto(fotoDataV, d.fecha, 'ventas', d.fecha, st);
+        await subirFoto(fotoDataV, d.fecha, 'ventas', d.fecha, st, usuarioActual);
         quitarFoto('v');
       }
       st.textContent=j.accion==='actualizado'?'Registro actualizado.':'Guardado correctamente.'; st.className='status';
@@ -825,7 +910,7 @@ async function confirmarGasto() {
     const st=document.getElementById('status-g');
     if(j.ok){
       if (fotoDataG) {
-        await subirFoto(fotoDataG, d.fecha, 'gastos', d.nombre||d.fecha, st);
+        await subirFoto(fotoDataG, d.fecha, 'gastos', d.nombre||d.fecha, st, usuarioActual);
         quitarFoto('g');
       }
       st.textContent= d.id ? 'Gasto actualizado.' : 'Gasto guardado.';st.className='status';
@@ -962,39 +1047,31 @@ function quitarFoto(modulo) {
   else                fotoDataG = null;
 }
 
-async function subirFoto(fotoBase64, fecha, tipo, referencia, statusEl) {
+async function subirFoto(fotoBase64, fecha, tipo, referencia, statusEl, usuario) {
   if (!fotoBase64) return null;
   try {
-    const base64 = fotoBase64.split(',')[1];
+    const base64  = fotoBase64.split(',')[1];
+    const correo  = usuario ? usuario.correo : '';
 
-    // Enviar con no-cors — el celular lo acepta sin problemas
-    // El script recibe el body como text/plain y parsea el JSON
     if (statusEl) { statusEl.textContent = '📷 Subiendo foto a Drive...'; statusEl.className = 'status'; }
 
-    fetch(SCRIPT_URL, {
+    // Enviar por POST con JSON — el Apps Script usa el token guardado por correo
+    const res = await fetch(SCRIPT_URL, {
       method:  'POST',
-      mode:    'no-cors',
-      headers: { 'Content-Type': 'text/plain' },
-      body:    JSON.stringify({ accion: 'subirFoto', base64, fecha, tipo, referencia })
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ accion: 'subirFoto', base64, fecha, tipo, referencia, correo })
     });
-
-    // Esperar que el script procese (Apps Script tarda ~3-5 seg en escribir a Drive)
-    await new Promise(r => setTimeout(r, 6000));
-
-    // Consultar el link guardado
-    if (statusEl) { statusEl.textContent = '📷 Verificando...'; }
-    const res  = await fetch(SCRIPT_URL + '?accion=obtenerLinkFoto&fecha=' + encodeURIComponent(fecha) + '&tipo=' + tipo + '&ref=' + encodeURIComponent(referencia));
     const data = await res.json();
+
     if (data.ok && data.url) {
       if (statusEl) { statusEl.textContent = '✅ Foto guardada en Drive.'; statusEl.className = 'status'; }
       return data.url;
     }
-
-    if (statusEl) { statusEl.textContent = '⚠️ Foto enviada, verificar en Drive.'; }
+    if (statusEl) { statusEl.textContent = '⚠️ ' + (data.error || 'Error al subir foto'); statusEl.className = 'status error'; }
     return null;
   } catch(e) {
     console.warn('Error subiendo foto:', e.message);
-    if (statusEl) { statusEl.textContent = '⚠️ Error al subir foto: ' + e.message; statusEl.className = 'status error'; }
+    if (statusEl) { statusEl.textContent = '⚠️ Error: ' + e.message; statusEl.className = 'status error'; }
     return null;
   }
 }
@@ -1057,6 +1134,23 @@ function renderAnalisis() {
       <div class="bar-track"><div class="bar-fill" style="width:${Math.round(m/maxV*100)}%"></div></div>
     </div>`).join('');
 }
+// ── Init: arrancar con login-screen ─────────────────────────
+(function() {
+  // Asegurar que login-screen esté activo al cargar
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('activo'));
+  document.getElementById('login-screen').classList.add('activo');
+
+  // Iniciar Google Login cuando el SDK esté listo
+  function tryInitGoogle() {
+    if (typeof google !== 'undefined' && google.accounts) {
+      iniciarGoogleLogin();
+    } else {
+      setTimeout(tryInitGoogle, 300);
+    }
+  }
+  tryInitGoogle();
+})();
+
 </script>
 </body>
 </html>
