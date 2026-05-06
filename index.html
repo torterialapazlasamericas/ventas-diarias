@@ -184,11 +184,11 @@ tbody tr{animation:fadeIn .2s ease;}
 <!-- ══ PIN ══ -->
 <!-- ══ LOGIN GOOGLE ══ -->
 <div id="login-screen" class="screen activo">
-  <div class="pin-card" style="text-align:center">
+  <div class="pin-card" style="text-align:center;max-width:340px">
     <h2>Registro de ventas</h2>
-    <p style="margin-bottom:1.5rem">Inicia sesión con tu cuenta de Google para continuar</p>
-    <div id="google-btn-wrap"></div>
-    <div class="pin-msg error" id="login-msg" style="margin-top:1rem"></div>
+    <p style="margin-bottom:2rem;color:var(--muted);font-size:14px">Inicia sesión con tu cuenta de Google para continuar</p>
+    <div id="google-btn-wrap" style="display:flex;justify-content:center;min-height:44px"></div>
+    <div id="login-msg" style="margin-top:1rem;font-size:13px;color:var(--danger);min-height:18px"></div>
   </div>
 </div>
 
@@ -498,7 +498,8 @@ tbody tr{animation:fadeIn .2s ease;}
 </div>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwMnsL9RAEnWuOHURZHwMJ5D9ZsTfE2CfwuNQKqbHInIpw0Fe-CtQ0Dqv8cxnKAqfc/exec";
+const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbwMnsL9RAEnWuOHURZHwMJ5D9ZsTfE2CfwuNQKqbHInIpw0Fe-CtQ0Dqv8cxnKAqfc/exec";
+const GOOGLE_CLIENT_ID = "276486408012-v56l9f45t0ag78oudv5vsbqm9ocka2lu.apps.googleusercontent.com";
 const C_TARJETA = 0.035, C_RAPPI = 0.18;
 
 let ventasRows = [], gastosRows = [];
@@ -603,26 +604,22 @@ function pintarDots(error) {
   }
 }
 // ── Google Login ────────────────────────────────────────────
-async function iniciarGoogleLogin() {
+function iniciarGoogleLogin() {
   try {
-    // Obtener CLIENT_ID desde el Apps Script
-    const r = await fetch(SCRIPT_URL + '?accion=getClientId');
-    const d = await r.json();
-    if (!d.ok) { document.getElementById('login-msg').textContent = 'Error: ' + d.error; return; }
-    clientIdGoogle = d.clientId;
-
-    // Inicializar Google Identity Services
+    clientIdGoogle = GOOGLE_CLIENT_ID;
+    // Inicializar Google Identity Services con el CLIENT_ID directo
     google.accounts.id.initialize({
-      client_id: clientIdGoogle,
+      client_id: GOOGLE_CLIENT_ID,
       callback:  onGoogleLogin,
-      auto_select: false
+      auto_select: false,
+      cancel_on_tap_outside: false
     });
     google.accounts.id.renderButton(
       document.getElementById('google-btn-wrap'),
-      { theme: 'outline', size: 'large', text: 'signin_with', locale: 'es' }
+      { theme: 'outline', size: 'large', text: 'signin_with', locale: 'es', width: 280 }
     );
   } catch(e) {
-    document.getElementById('login-msg').textContent = 'Error de conexión';
+    document.getElementById('login-msg').textContent = 'Error al cargar Google: ' + e.message;
   }
 }
 
