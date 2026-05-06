@@ -56,11 +56,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .nav-back{background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);transition:color .15s;padding:0;}
 .nav-back:hover{color:var(--accent);}
 
-.layout{max-width:980px;margin:0 auto;padding:2rem 1.5rem;display:grid;grid-template-columns:260px 1fr;gap:1.25rem;align-items:start;overflow:hidden;}
+.layout{max-width:980px;margin:0 auto;padding:2rem 1.5rem;display:grid;grid-template-columns:260px 1fr;gap:1.25rem;align-items:start;}
 @media(max-width:700px){
   .layout{grid-template-columns:1fr;padding:.75rem;gap:.75rem;}
   .mod-header{padding:.75rem 1rem;}
-  .form-card{position:static;padding:1rem;}
+  .form-card{position:static !important;padding:1rem;top:auto !important;}
   .resumen-card,.table-card{border-radius:8px;}
   .right-panel{gap:.75rem;}
   table{font-size:12px;}
@@ -81,7 +81,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .foto-preview .foto-del{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.5);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .foto-label{font-size:11px;color:var(--muted);margin-top:4px;text-align:center;}
 /* ── FORM ── */
-.form-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;box-shadow:var(--shadow);overflow:hidden;min-width:0;position:sticky;top:1.5rem;}
+.form-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;box-shadow:var(--shadow);min-width:0;position:sticky;top:1.5rem;}
 .form-card h2{font-family:'DM Serif Display',serif;font-size:17px;font-weight:400;margin-bottom:1.25rem;}
 .field{margin-bottom:1rem;}
 .field label{display:block;font-size:12px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;}
@@ -96,8 +96,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .status.error{color:var(--danger);}
 
 /* ── CHIPS ── */
-.chips-wrap{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px;width:100%;}
-.chip{padding:7px 4px;border-radius:10px;border:1px solid var(--border);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:11.5px;color:var(--muted);cursor:pointer;transition:background .15s,border-color .15s,color .15s;text-align:center;width:100%;white-space:nowrap;}
+.chips-wrap{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:8px;width:100%;}
+.chip{padding:8px 6px;border-radius:10px;border:1px solid var(--border);background:var(--bg);font-family:'DM Sans',sans-serif;font-size:12px;color:var(--muted);cursor:pointer;transition:background .15s,border-color .15s,color .15s;text-align:center;width:100%;white-space:nowrap;}
 .chip:hover{background:var(--acc-bg);border-color:var(--accent);color:var(--accent);}
 .chip.activo{background:var(--accent);border-color:var(--accent);color:#fff;}
 
@@ -119,8 +119,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .btn-confirm:hover{opacity:.88;}
 
 /* ── PANEL DERECHO ── */
-.right-panel{display:flex;flex-direction:column;gap:1.25rem;}
-.resumen-card,.table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.right-panel{display:flex;flex-direction:column;gap:1.25rem;min-width:0;overflow:hidden;}
+.resumen-card,.table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;min-width:0;min-width:0;}
 .tabs{display:flex;border-bottom:1px solid var(--border);}
 .tab{flex:1;padding:10px 6px;font-size:13px;font-weight:500;text-align:center;cursor:pointer;color:var(--muted);border:none;background:none;font-family:'DM Sans',sans-serif;border-bottom:2px solid transparent;margin-bottom:-1px;}
 .tab.active{color:var(--accent);border-bottom-color:var(--accent);}
