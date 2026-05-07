@@ -258,6 +258,7 @@ tbody tr{animation:fadeIn .2s ease;}
       <button class="menu-btn" id="mbtn-ventas"   onclick="irA('ventas-screen')"><span class="micon">💰</span> Ingresar ventas</button>
       <button class="menu-btn" id="mbtn-gastos"   onclick="irA('gastos-screen')"><span class="micon">🧾</span> Ingresar gastos</button>
       <button class="menu-btn" id="mbtn-analisis" onclick="irA('analisis-screen')"><span class="micon">📊</span> Analizar ganancias</button>
+      <button class="menu-btn" id="mbtn-admin"    onclick="irA('admin-screen')"><span class="micon">👥</span> Administrar perfiles</button>
       <button class="menu-btn" onclick="cerrarSesion()" style="font-size:14px;color:var(--muted);border-style:dashed"><span class="micon">🚪</span> Cerrar sesión</button>
     </div>
   </div>
@@ -542,8 +543,58 @@ tbody tr{animation:fadeIn .2s ease;}
   </div>
 </div>
 
+<!-- ══ ADMIN PERFILES ══ -->
+<div id="admin-screen" class="screen">
+  <div class="mod-header">
+    <button class="nav-back" onclick="irA('menu-screen')">← Menú</button>
+    <h1>Administrar perfiles</h1>
+  </div>
+  <div style="max-width:700px;margin:0 auto;padding:1.5rem">
+    <div class="form-card" style="margin-bottom:1.25rem">
+      <h2 id="admin-form-title">Nuevo usuario</h2>
+      <input type="hidden" id="admin-edit-idx" value="">
+      <div class="field"><label>Nombre</label><input type="text" id="au-nombre" placeholder="Ej. Juan" autocomplete="off"/></div>
+      <div class="field"><label>Correo Google</label><input type="text" id="au-correo" placeholder="correo@gmail.com" autocomplete="off"/></div>
+      <div class="field select-field"><label>Perfil</label>
+        <select id="au-perfil">
+          <option value="Admin">Admin</option>
+          <option value="Super">Super</option>
+          <option value="Caja">Caja</option>
+        </select>
+      </div>
+      <div class="field"><label>PIN (4 dígitos)</label><input type="text" inputmode="numeric" id="au-pin" placeholder="0000" maxlength="4" autocomplete="off"/></div>
+      <div class="field select-field"><label>Activo</label>
+        <select id="au-activo"><option value="SI">SI</option><option value="NO">NO</option></select>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:.5rem">
+        <button class="btn-primary" onclick="guardarUsuario()" style="flex:2">Guardar</button>
+        <button class="btn-primary" onclick="cancelarEdicionAdmin()" style="flex:1;background:var(--bg);color:var(--muted);border:1px solid var(--border)">Cancelar</button>
+      </div>
+      <div class="status" id="admin-status"></div>
+    </div>
+    <div class="table-card">
+      <div class="table-header"><h2>Usuarios registrados</h2></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th style="text-align:left">Nombre</th>
+            <th style="text-align:left">Correo</th>
+            <th>Perfil</th>
+            <th>PIN</th>
+            <th>Activo</th>
+            <th></th>
+          </tr></thead>
+          <tbody id="tbody-admin">
+            <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--muted)"><span class="spin"></span>Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
-const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbyhPrHPRsE6_QWd7PVL1jlig8Pa97BnrvlRxklY-ZS1EOlJmPdA7NmPUX7sOIH36xwy/exec";
+const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbykcDiW-bCujg7gXUJciqLw_YkEADDF6QGLpV1PX3ZgeiPI9YGBHbqROIGoqzytNXU/exec";
 const GOOGLE_CLIENT_ID = "280797416294-m1q3nggftt0cpa06ljilpmmcu6gv967g.apps.googleusercontent.com";
 
 let ventasRows = [], gastosRows = [];
@@ -615,8 +666,10 @@ function fmtPeriodo(desde, hasta) {
     // Menú — ocultar Gastos para Caja, ocultar Análisis para no-Admin
     const btnGastos   = document.getElementById('mbtn-gastos');
     const btnAnalisis = document.getElementById('mbtn-analisis');
+    const btnAdmin    = document.getElementById('mbtn-admin');
     if (btnGastos)   btnGastos.style.display   = esCaja  ? 'none' : 'flex';
     if (btnAnalisis) btnAnalisis.style.display = esAdmin ? 'flex' : 'none';
+    if (btnAdmin)    btnAdmin.style.display    = esAdmin ? 'flex' : 'none';
 
     // Ventas — ocultar resumen de tabs para Caja
     const resumenV = document.getElementById('resumen-v');
@@ -640,8 +693,10 @@ function irA(screenId) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('activo'));
   document.getElementById(screenId).classList.add('activo');
   if (screenId==='menu-screen')     aplicarPermisos();
+  if (screenId==='pin-screen')      { pinActual=''; pintarDots(false); document.getElementById('pin-msg').textContent=''; }
   if (screenId==='ventas-screen')   iniciarVentas();
   if (screenId==='gastos-screen')   iniciarGastos();
+  if (screenId==='admin-screen')    iniciarAdmin();
   if (screenId==='analisis-screen') iniciarAnalisis();
   if (screenId==='menu-screen') {
     const hoy=new Date();
@@ -1300,6 +1355,110 @@ function renderAnalisis() {
       <div class="bar-track"><div class="bar-fill" style="width:${Math.round(m/maxV*100)}%"></div></div>
     </div>`).join('');
 }
+// ══════════════════ ADMIN PERFILES ══════════════════════════
+let usuariosAdmin = [];
+
+async function iniciarAdmin() {
+  document.getElementById('admin-status').textContent = '';
+  cancelarEdicionAdmin();
+  await cargarUsuariosAdmin();
+}
+
+async function cargarUsuariosAdmin() {
+  const tbody = document.getElementById('tbody-admin');
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--muted)"><span class="spin"></span>Cargando...</td></tr>';
+  try {
+    const res  = await fetch(SCRIPT_URL + '?accion=listarUsuarios');
+    const data = await res.json();
+    if (data.ok) {
+      usuariosAdmin = data.usuarios;
+      renderUsuariosAdmin();
+    } else {
+      tbody.innerHTML = `<tr><td colspan="6" style="color:var(--danger);text-align:center;padding:1rem">${data.error}</td></tr>`;
+    }
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="6" style="color:var(--danger);text-align:center;padding:1rem">Error de conexión</td></tr>';
+  }
+}
+
+function renderUsuariosAdmin() {
+  const tbody = document.getElementById('tbody-admin');
+  tbody.innerHTML = '';
+  if (!usuariosAdmin.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--muted)">Sin usuarios</td></tr>';
+    return;
+  }
+  usuariosAdmin.forEach((u, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${u.usuario}</td>
+      <td style="font-size:12px;color:var(--muted)">${u.correo}</td>
+      <td style="text-align:center"><span style="font-size:12px;padding:2px 8px;border-radius:10px;background:var(--acc-bg);color:var(--accent)">${u.perfil}</span></td>
+      <td style="text-align:center;font-family:monospace">${u.pin}</td>
+      <td style="text-align:center"><span style="color:${u.activo==='SI'?'var(--accent)':'var(--danger)'}">${u.activo}</span></td>
+      <td style="text-align:center"><button class="btn-corregir" onclick="editarUsuario(${i})">Editar</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function editarUsuario(idx) {
+  const u = usuariosAdmin[idx];
+  document.getElementById('admin-form-title').textContent = 'Editar usuario';
+  document.getElementById('admin-edit-idx').value = idx;
+  document.getElementById('au-nombre').value  = u.usuario;
+  document.getElementById('au-correo').value  = u.correo;
+  document.getElementById('au-perfil').value  = u.perfil;
+  document.getElementById('au-pin').value     = u.pin;
+  document.getElementById('au-activo').value  = u.activo;
+  document.querySelector('#admin-screen .form-card').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function cancelarEdicionAdmin() {
+  document.getElementById('admin-form-title').textContent = 'Nuevo usuario';
+  document.getElementById('admin-edit-idx').value = '';
+  ['au-nombre','au-correo','au-pin'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('au-perfil').value = 'Admin';
+  document.getElementById('au-activo').value = 'SI';
+  document.getElementById('admin-status').textContent = '';
+}
+
+async function guardarUsuario() {
+  const idx    = document.getElementById('admin-edit-idx').value;
+  const nombre = document.getElementById('au-nombre').value.trim();
+  const correo = document.getElementById('au-correo').value.trim().toLowerCase();
+  const perfil = document.getElementById('au-perfil').value;
+  const pin    = document.getElementById('au-pin').value.trim();
+  const activo = document.getElementById('au-activo').value;
+  const st     = document.getElementById('admin-status');
+
+  if (!nombre) { st.textContent='Ingresa el nombre.'; st.className='status error'; return; }
+  if (!correo || !correo.includes('@')) { st.textContent='Ingresa un correo válido.'; st.className='status error'; return; }
+  if (!pin || pin.length !== 4) { st.textContent='El PIN debe tener 4 dígitos.'; st.className='status error'; return; }
+
+  st.textContent = 'Guardando...'; st.className = 'status';
+
+  try {
+    const params = new URLSearchParams({
+      accion: 'guardarUsuario',
+      fila:   idx !== '' ? String(parseInt(idx)+2) : '',  // fila en Sheet (1-indexed + encabezado)
+      nombre, correo, perfil, pin, activo
+    });
+    const res  = await fetch(SCRIPT_URL + '?' + params.toString());
+    const data = await res.json();
+    if (data.ok) {
+      st.textContent = data.accion === 'actualizado' ? 'Usuario actualizado.' : 'Usuario agregado.';
+      st.className = 'status';
+      cancelarEdicionAdmin();
+      await cargarUsuariosAdmin();
+    } else {
+      st.textContent = 'Error: ' + (data.error || '');
+      st.className = 'status error';
+    }
+  } catch(e) {
+    st.textContent = 'Error de conexión.'; st.className = 'status error';
+  }
+}
+
 // ── Init ─────────────────────────────────────────────────────
 document.querySelectorAll('.screen').forEach(s => s.classList.remove('activo'));
 document.getElementById('login-screen').classList.add('activo');
