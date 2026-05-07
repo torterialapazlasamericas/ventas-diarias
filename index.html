@@ -231,6 +231,7 @@ tbody tr{animation:fadeIn .2s ease;}
       <button class="menu-btn" onclick="irA('ventas-screen')"><span class="micon">💰</span> Ingresar ventas</button>
       <button class="menu-btn" onclick="irA('gastos-screen')"><span class="micon">🧾</span> Ingresar gastos</button>
       <button class="menu-btn" onclick="irA('analisis-screen')"><span class="micon">📊</span> Analizar ganancias</button>
+      <button class="menu-btn" onclick="cerrarSesion()" style="font-size:14px;color:var(--muted);border-style:dashed"><span class="micon">🚪</span> Cerrar sesión</button>
     </div>
   </div>
 </div>
@@ -564,6 +565,15 @@ function fmtPeriodo(desde, hasta) {
 }
 
 // ── Navegación ────────────────────────────────────────────────
+function cerrarSesion() {
+  localStorage.removeItem('vu_correo');
+  localStorage.removeItem('vu_usuario');
+  localStorage.removeItem('vu_perfil');
+  usuarioActual = null;
+  irA('login-screen');
+  setTimeout(() => iniciarGoogleLogin(), 300);
+}
+
 function irA(screenId) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('activo'));
   document.getElementById(screenId).classList.add('activo');
@@ -648,6 +658,10 @@ async function onGoogleLogin(response) {
         correo:  correo,
         token:   response.credential
       };
+      // Guardar sesión para no pedir login de Google en recargas
+      localStorage.setItem('vu_correo',  correo);
+      localStorage.setItem('vu_usuario', d.usuario);
+      localStorage.setItem('vu_perfil',  d.perfil);
       msg.textContent = '';
       document.getElementById('pin-bienvenida').textContent = 'Hola, ' + d.usuario;
       irA('pin-screen');
@@ -1140,15 +1154,33 @@ document.querySelectorAll('.screen').forEach(s => s.classList.remove('activo'));
 document.getElementById('login-screen').classList.add('activo');
 
 window.onload = function() {
-  if (typeof google !== 'undefined' && google.accounts) {
-    iniciarGoogleLogin();
+  // Revisar si ya hay sesión guardada
+  const correoGuardado  = localStorage.getItem('vu_correo');
+  const usuarioGuardado = localStorage.getItem('vu_usuario');
+  const perfilGuardado  = localStorage.getItem('vu_perfil');
+
+  if (correoGuardado && usuarioGuardado) {
+    // Ya estaba logueado — ir directo al PIN
+    usuarioActual = {
+      usuario: usuarioGuardado,
+      perfil:  perfilGuardado,
+      correo:  correoGuardado,
+      token:   null
+    };
+    document.getElementById('pin-bienvenida').textContent = 'Hola, ' + usuarioGuardado;
+    irA('pin-screen');
   } else {
-    const t = setInterval(() => {
-      if (typeof google !== 'undefined' && google.accounts) {
-        clearInterval(t);
-        iniciarGoogleLogin();
-      }
-    }, 200);
+    // Primera vez — mostrar login de Google
+    if (typeof google !== 'undefined' && google.accounts) {
+      iniciarGoogleLogin();
+    } else {
+      const t = setInterval(() => {
+        if (typeof google !== 'undefined' && google.accounts) {
+          clearInterval(t);
+          iniciarGoogleLogin();
+        }
+      }, 200);
+    }
   }
 };
 
