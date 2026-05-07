@@ -779,7 +779,8 @@ async function cargarVentas() {
         fecha:normFecha(r.fecha),
         efectivo:+r.efectivo||0, tarjeta:+r.tarjeta||0, tarjetaCon:+r.tarjetaCon||0,
         rappi:+r.rappi||0, rappiCon:+r.rappiCon||0, transferencia:+r.transferencia||0,
-        ventaConRappi:+r.ventaConRappi||0, ventaTotalConRappi:+r.ventaTotalConRappi||0
+        ventaConRappi:+r.ventaConRappi||0, ventaTotalConRappi:+r.ventaTotalConRappi||0,
+        linkFoto: r.linkFoto || ''
       }));
       renderTablaVentas(); renderResumenV();
     }
@@ -794,7 +795,8 @@ function renderTablaVentas() {
   if (!ventasRows.length) { tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--muted)">Sin registros aún</td></tr>'; return; }
   [...ventasRows].reverse().slice(0,7).forEach(r=>{
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${labelFecha(r.fecha)}</td><td>${fmtN(r.efectivo)}</td><td>${fmtN(r.tarjeta)}</td><td>${fmtN(r.transferencia)}</td><td>${fmtN(r.rappi)}</td><td style="text-align:center"><button class="btn-corregir" onclick="corregirVenta('${r.fecha}')">Corregir</button></td>`;
+    const fotoBtnV = r.linkFoto ? `<a href="${r.linkFoto}" target="_blank" style="font-size:16px;text-decoration:none;margin-right:4px" title="Ver foto">📷</a>` : '';
+    tr.innerHTML=`<td>${labelFecha(r.fecha)}</td><td>${fmtN(r.efectivo)}</td><td>${fmtN(r.tarjeta)}</td><td>${fmtN(r.transferencia)}</td><td>${fmtN(r.rappi)}</td><td style="text-align:center;white-space:nowrap">${fotoBtnV}<button class="btn-corregir" onclick="corregirVenta('${r.fecha}')">Corregir</button></td>`;
     tb.appendChild(tr);
   });
 }
