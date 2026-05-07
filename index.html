@@ -501,7 +501,7 @@ tbody tr{animation:fadeIn .2s ease;}
 </div>
 
 <script>
-const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbyI_9KViYNw-23JGFRgD_cL37UBrdyPdLkn4arwhDsMjCN98LEra2E-P3N9ZP45_Sfo/exec";
+const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbwcIRQsVPYz_v-_tbwS7cP2YV8ykOkS19GUolZMAItKZNNDND8KL1uc_812KYUkpHoZ/exec";
 const GOOGLE_CLIENT_ID = "280797416294-m1q3nggftt0cpa06ljilpmmcu6gv967g.apps.googleusercontent.com";
 const C_TARJETA = 0.035, C_RAPPI = 0.18;
 
@@ -1070,10 +1070,10 @@ async function subirFoto(fotoBase64, fecha, tipo, referencia, statusEl, usuario)
 
     if (statusEl) { statusEl.textContent = '📷 Subiendo foto a Drive...'; statusEl.className = 'status'; }
 
-    // Enviar por POST con JSON — el Apps Script usa el token guardado por correo
+    // CORS requiere text/plain — el script parsea el JSON del body
     const res = await fetch(SCRIPT_URL, {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain' },
       body:    JSON.stringify({ accion: 'subirFoto', base64, fecha, tipo, referencia, correo })
     });
     const data = await res.json();
