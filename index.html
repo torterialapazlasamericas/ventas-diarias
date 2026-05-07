@@ -780,6 +780,15 @@ function abrirModalVenta() {
   if (!fecha) { st.textContent='Ingresa una fecha.'; st.className='status error'; return; }
   if (!efectivo&&!tarjeta&&!transfer&&!rappi) { st.textContent='Ingresa al menos un monto.'; st.className='status error'; return; }
   st.textContent=''; st.className='status';
+
+  // Verificar si ya existe un registro con esa fecha
+  const yaExiste = ventasRows.some(r => r.fecha === fecha);
+  if (yaExiste) {
+    st.textContent = '⚠️ Ya existe un registro para el ' + labelFecha(fecha) + '. Usa el botón "Corregir" para editarlo.';
+    st.className = 'status error';
+    return;
+  }
+
   pendienteVenta = {fecha,efectivo,tarjeta,transfer,rappi,propinas,envio};
   document.getElementById('mv-fecha').textContent   = labelFecha(fecha);
   document.getElementById('mv-efectivo').textContent= fmt(efectivo);
