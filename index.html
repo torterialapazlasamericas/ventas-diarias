@@ -543,7 +543,7 @@ tbody tr{animation:fadeIn .2s ease;}
 </div>
 
 <script>
-const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbzswyVp8F2kcCCDhlNiRut59oICI0FjjjAooUKLhtfclcWdeVDnOnqJ7mZT5sw5W-2c/exec";
+const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbyhPrHPRsE6_QWd7PVL1jlig8Pa97BnrvlRxklY-ZS1EOlJmPdA7NmPUX7sOIH36xwy/exec";
 const GOOGLE_CLIENT_ID = "280797416294-m1q3nggftt0cpa06ljilpmmcu6gv967g.apps.googleusercontent.com";
 
 let ventasRows = [], gastosRows = [];
@@ -837,19 +837,19 @@ async function confirmarVenta() {
   const btn=document.getElementById('btn-v');
   btn.disabled=true; btn.textContent='Guardando...';
   try {
-    const p = new URLSearchParams({accion:'agregar',fecha:d.fecha,efectivo:d.efectivo,tarjeta:d.tarjeta,transferencia:d.transfer,rappi:d.rappi});
+    const p = new URLSearchParams({accion:'agregar',fecha:d.fecha,efectivo:d.efectivo,tarjeta:d.tarjeta,transferencia:d.transfer,rappi:d.rappi,usuario:usuarioActual?usuarioActual.usuario:''});
     const r = await fetch(SCRIPT_URL+'?'+p);
     const j = await r.json();
     const st=document.getElementById('status-v');
     if (j.ok) {
       // Guardar propinas en Gastos si > 0
       if (d.propinas > 0) {
-        const pp = new URLSearchParams({accion:'agregarGasto',fecha:d.fecha,nombre:'Propinas',formaPago:'Efectivo',cantidad:d.propinas,nota:'Desde registro de ventas'});
+        const pp = new URLSearchParams({accion:'agregarGasto',fecha:d.fecha,nombre:'Propinas',formaPago:'Efectivo',cantidad:d.propinas,nota:'Desde registro de ventas',usuario:usuarioActual?usuarioActual.usuario:''});
         await fetch(SCRIPT_URL+'?'+pp);
       }
       // Guardar envío en Gastos si > 0
       if (d.envio > 0) {
-        const pe = new URLSearchParams({accion:'agregarGasto',fecha:d.fecha,nombre:'Envío a domicilio',formaPago:'Efectivo',cantidad:d.envio,nota:'Desde registro de ventas'});
+        const pe = new URLSearchParams({accion:'agregarGasto',fecha:d.fecha,nombre:'Envío a domicilio',formaPago:'Efectivo',cantidad:d.envio,nota:'Desde registro de ventas',usuario:usuarioActual?usuarioActual.usuario:''});
         await fetch(SCRIPT_URL+'?'+pe);
       }
       if (fotoDataV) {
@@ -1018,7 +1018,7 @@ async function confirmarGasto() {
   const btn=document.getElementById('btn-g');
   btn.disabled=true;btn.textContent='Guardando...';
   try {
-    const params={accion:'agregarGasto',fecha:d.fecha,nombre:d.nombre,formaPago:d.fpago,cantidad:d.cantidad,nota:d.nota||''};
+    const params={accion:'agregarGasto',fecha:d.fecha,nombre:d.nombre,formaPago:d.fpago,cantidad:d.cantidad,nota:d.nota||'',usuario:usuarioActual?usuarioActual.usuario:''};
     if (d.id) params.id = d.id;  // si hay id, el script actualizará en vez de crear
     const p=new URLSearchParams(params);
     const r=await fetch(SCRIPT_URL+'?'+p);
