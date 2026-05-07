@@ -74,6 +74,26 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   header h1{font-size:18px;}
 }
 
+/* ── Modal visor de foto ── */
+.foto-modal-overlay {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.85); z-index:200;
+  align-items:center; justify-content:center;
+  flex-direction:column; gap:12px;
+}
+.foto-modal-overlay.visible { display:flex; }
+.foto-modal-overlay img {
+  max-width:92vw; max-height:80vh;
+  border-radius:10px; object-fit:contain;
+}
+.foto-modal-close {
+  color:#fff; background:rgba(255,255,255,0.15);
+  border:none; border-radius:8px; padding:8px 24px;
+  font-size:14px; cursor:pointer; font-family:'DM Sans',sans-serif;
+}
+.foto-modal-close:hover { background:rgba(255,255,255,0.25); }
+.foto-modal-spin { color:#fff; font-size:14px; }
+
 /* ── Cámara / Foto ── */
 .foto-area{margin-top:.75rem;}
 .btn-camara{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px;border:1.5px dashed var(--border);border-radius:8px;background:var(--bg);font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;transition:border-color .15s,color .15s;}
@@ -234,6 +254,13 @@ tbody tr{animation:fadeIn .2s ease;}
       <button class="menu-btn" onclick="cerrarSesion()" style="font-size:14px;color:var(--muted);border-style:dashed"><span class="micon">🚪</span> Cerrar sesión</button>
     </div>
   </div>
+</div>
+
+<!-- ══ MODAL VISOR FOTO ══ -->
+<div class="foto-modal-overlay" id="foto-modal">
+  <div class="foto-modal-spin" id="foto-modal-msg">Cargando foto...</div>
+  <img id="foto-modal-img" src="" alt="Foto" style="display:none"/>
+  <button class="foto-modal-close" onclick="cerrarFotoModal()">✕ Cerrar</button>
 </div>
 
 <!-- ══ MODAL VENTAS ══ -->
@@ -501,7 +528,7 @@ tbody tr{animation:fadeIn .2s ease;}
 </div>
 
 <script>
-const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbwYv1c25rpPAltan_-kNfT366Tp26iljYwl67tvx5qedtTRW_kqFF5Q9Y7rKc_g8hmk/exec";
+const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbzswyVp8F2kcCCDhlNiRut59oICI0FjjjAooUKLhtfclcWdeVDnOnqJ7mZT5sw5W-2c/exec";
 const GOOGLE_CLIENT_ID = "280797416294-m1q3nggftt0cpa06ljilpmmcu6gv967g.apps.googleusercontent.com";
 const C_TARJETA = 0.035, C_RAPPI = 0.18;
 
@@ -795,7 +822,9 @@ function renderTablaVentas() {
   if (!ventasRows.length) { tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--muted)">Sin registros aún</td></tr>'; return; }
   [...ventasRows].reverse().slice(0,7).forEach(r=>{
     const tr=document.createElement('tr');
-    const fotoBtnV = r.linkFoto ? `<a href="${r.linkFoto}" target="_blank" style="font-size:16px;text-decoration:none;margin-right:4px" title="Ver foto">📷</a>` : '';
+    const fotoBtnV = r.linkFoto
+      ? `<button onclick="verFoto('${extraerFileId(r.linkFoto)}')" style="background:none;border:none;cursor:pointer;font-size:18px;margin-right:4px" title="Ver foto">📷</button>`
+      : '';
     tr.innerHTML=`<td>${labelFecha(r.fecha)}</td><td>${fmtN(r.efectivo)}</td><td>${fmtN(r.tarjeta)}</td><td>${fmtN(r.transferencia)}</td><td>${fmtN(r.rappi)}</td><td style="text-align:center;white-space:nowrap">${fotoBtnV}<button class="btn-corregir" onclick="corregirVenta('${r.fecha}')">Corregir</button></td>`;
     tb.appendChild(tr);
   });
@@ -959,7 +988,7 @@ function renderTablaGastos() {
   if(!gastosRows.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--muted)">Sin gastos aún</td></tr>';return;}
   [...gastosRows].reverse().slice(0,7).forEach(g=>{
     const tr=document.createElement('tr');
-      const fotoBtn = g.linkFoto ? `<a href="${g.linkFoto}" target="_blank" style="font-size:16px;text-decoration:none;margin-right:4px" title="Ver foto">📷</a>` : '';
+      const fotoBtn = g.linkFoto ? `<button onclick="verFoto('${extraerFileId(g.linkFoto)}')" style="background:none;border:none;cursor:pointer;font-size:18px;margin-right:4px" title="Ver foto">📷</button>` : '';
     tr.innerHTML=`<td>${labelFecha(g.fecha)}</td><td>${g.nombre}</td><td>${g.formaPago}</td><td>${fmtN(g.cantidad)}</td><td style="color:var(--muted);font-size:12px">${g.nota||'—'}</td><td style="text-align:center;white-space:nowrap">${fotoBtn}<button class="btn-corregir" onclick="corregirGasto('${g.id}')">Corregir</button></td>`;
     tb.appendChild(tr);
   });
@@ -1017,6 +1046,56 @@ function exportGastosCSV() {
   const blob=new Blob([h.join(',')+'\n'+b.join('\n')],{type:'text/csv'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='gastos.csv';a.click();
 }
+
+// ══════════════════════ VISOR DE FOTOS ════════════════════════
+function extraerFileId(url) {
+  if (!url) return '';
+  // Formato: uc?export=view&id=FILE_ID
+  const m1 = url.match(/[?&]id=([^&]+)/);
+  if (m1) return m1[1];
+  // Formato: /file/d/FILE_ID/
+  const m2 = url.match(/\/d\/([^\/]+)/);
+  if (m2) return m2[1];
+  return '';
+}
+
+async function verFoto(fileId) {
+  if (!fileId) return;
+  const overlay = document.getElementById('foto-modal');
+  const img     = document.getElementById('foto-modal-img');
+  const msg     = document.getElementById('foto-modal-msg');
+
+  overlay.classList.add('visible');
+  img.style.display = 'none';
+  msg.style.display = 'block';
+  msg.textContent   = 'Cargando foto...';
+
+  try {
+    const res  = await fetch(SCRIPT_URL + '?accion=obtenerFoto&fileId=' + encodeURIComponent(fileId));
+    const data = await res.json();
+    if (data.ok) {
+      img.src = 'data:' + data.mimeType + ';base64,' + data.base64;
+      img.style.display = 'block';
+      msg.style.display = 'none';
+    } else {
+      msg.textContent = '⚠️ No se pudo cargar la foto';
+    }
+  } catch(e) {
+    msg.textContent = '⚠️ Error: ' + e.message;
+  }
+}
+
+function cerrarFotoModal() {
+  const overlay = document.getElementById('foto-modal');
+  const img     = document.getElementById('foto-modal-img');
+  overlay.classList.remove('visible');
+  img.src = '';
+}
+
+// Cerrar con click fuera de la imagen
+document.addEventListener('click', function(e) {
+  if (e.target.id === 'foto-modal') cerrarFotoModal();
+});
 
 // ══════════════════════ CÁMARA / FOTOS ════════════════════════
 let fotoDataV = null;  // base64 de la foto de venta
