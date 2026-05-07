@@ -74,6 +74,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   header h1{font-size:18px;}
 }
 
+/* ── Sección gastos del día ── */
+.field-section-label {
+  font-size:11px; font-weight:500; text-transform:uppercase;
+  letter-spacing:.05em; color:var(--muted);
+  border-top:1px solid var(--border);
+  padding-top:10px; margin-top:4px; margin-bottom:2px;
+}
 /* ── Modal visor de foto ── */
 .foto-modal-overlay {
   display:none; position:fixed; inset:0;
@@ -272,6 +279,11 @@ tbody tr{animation:fadeIn .2s ease;}
     <div class="modal-row"><span class="ml">Tarjeta</span>      <span class="mv" id="mv-tarjeta"></span></div>
     <div class="modal-row"><span class="ml">Transferencia</span><span class="mv" id="mv-transfer"></span></div>
     <div class="modal-row"><span class="ml">Rappi</span>        <span class="mv" id="mv-rappi"></span></div>
+    <div id="mv-gastos-wrap" style="display:none">
+      <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:8px 0 4px;border-top:1px solid var(--border);margin-top:4px">Gastos del día</div>
+      <div class="modal-row"><span class="ml">Propinas</span><span class="mv" id="mv-propinas"></span></div>
+      <div class="modal-row"><span class="ml">Envío a domicilio</span><span class="mv" id="mv-envio"></span></div>
+    </div>
     <div class="modal-total"><span>Total del día</span><span id="mv-total"></span></div>
     <div class="modal-btns">
       <button class="btn-cancel" onclick="cerrarModal('modal-v')">Corregir</button>
@@ -312,6 +324,9 @@ tbody tr{animation:fadeIn .2s ease;}
       <div class="field"><label>Tarjeta</label><input type="text" inputmode="decimal" id="v-tarjeta" placeholder="0" autocomplete="off"/></div>
       <div class="field"><label>Transferencia</label><input type="text" inputmode="decimal" id="v-transfer" placeholder="0" autocomplete="off"/></div>
       <div class="field"><label>Rappi</label><input type="text" inputmode="decimal" id="v-rappi" placeholder="0" autocomplete="off"/></div>
+      <div class="field-section-label">Gastos del día</div>
+      <div class="field"><label>Propinas</label><input type="text" inputmode="decimal" id="v-propinas" placeholder="0" autocomplete="off"/></div>
+      <div class="field"><label>Envío a domicilio</label><input type="text" inputmode="decimal" id="v-envio" placeholder="0" autocomplete="off"/></div>
       <!-- Foto nota de venta -->
       <div class="foto-area">
         <input type="file" id="foto-input-v" accept="image/*" capture="environment" style="display:none" onchange="previsualizarFoto('v')"/>
@@ -759,17 +774,28 @@ function abrirModalVenta() {
   const tarjeta  = parseFloat(document.getElementById('v-tarjeta').value)||0;
   const transfer = parseFloat(document.getElementById('v-transfer').value)||0;
   const rappi    = parseFloat(document.getElementById('v-rappi').value)||0;
+  const propinas = parseFloat(document.getElementById('v-propinas').value)||0;
+  const envio    = parseFloat(document.getElementById('v-envio').value)||0;
   const st = document.getElementById('status-v');
   if (!fecha) { st.textContent='Ingresa una fecha.'; st.className='status error'; return; }
   if (!efectivo&&!tarjeta&&!transfer&&!rappi) { st.textContent='Ingresa al menos un monto.'; st.className='status error'; return; }
   st.textContent=''; st.className='status';
-  pendienteVenta = {fecha,efectivo,tarjeta,transfer,rappi};
+  pendienteVenta = {fecha,efectivo,tarjeta,transfer,rappi,propinas,envio};
   document.getElementById('mv-fecha').textContent   = labelFecha(fecha);
   document.getElementById('mv-efectivo').textContent= fmt(efectivo);
   document.getElementById('mv-tarjeta').textContent = fmt(tarjeta);
   document.getElementById('mv-transfer').textContent= fmt(transfer);
   document.getElementById('mv-rappi').textContent   = fmt(rappi);
   document.getElementById('mv-total').textContent   = fmt(efectivo+tarjeta+transfer+rappi);
+  // Mostrar gastos del día en el modal si hay
+  const mvGastos = document.getElementById('mv-gastos-wrap');
+  if (mvGastos) {
+    mvGastos.style.display = (propinas>0||envio>0) ? 'block' : 'none';
+    const elP = document.getElementById('mv-propinas');
+    const elE = document.getElementById('mv-envio');
+    if (elP) elP.textContent = fmt(propinas);
+    if (elE) elE.textContent = fmt(envio);
+  }
   document.getElementById('modal-v').classList.add('visible');
 }
 
@@ -785,12 +811,22 @@ async function confirmarVenta() {
     const j = await r.json();
     const st=document.getElementById('status-v');
     if (j.ok) {
+      // Guardar propinas en Gastos si > 0
+      if (d.propinas > 0) {
+        const pp = new URLSearchParams({accion:'agregarGasto',fecha:d.fecha,nombre:'Propinas',formaPago:'Efectivo',cantidad:d.propinas,nota:'Desde registro de ventas'});
+        await fetch(SCRIPT_URL+'?'+pp);
+      }
+      // Guardar envío en Gastos si > 0
+      if (d.envio > 0) {
+        const pe = new URLSearchParams({accion:'agregarGasto',fecha:d.fecha,nombre:'Envío a domicilio',formaPago:'Efectivo',cantidad:d.envio,nota:'Desde registro de ventas'});
+        await fetch(SCRIPT_URL+'?'+pe);
+      }
       if (fotoDataV) {
         await subirFoto(fotoDataV, d.fecha, 'ventas', d.fecha, st, usuarioActual);
         quitarFoto('v');
       }
       st.textContent=j.accion==='actualizado'?'Registro actualizado.':'Guardado correctamente.'; st.className='status';
-      ['v-efectivo','v-tarjeta','v-transfer','v-rappi'].forEach(id=>document.getElementById(id).value='');
+      ['v-efectivo','v-tarjeta','v-transfer','v-rappi','v-propinas','v-envio'].forEach(id=>document.getElementById(id).value='');
       await cargarVentas();
     } else { st.textContent='Error: '+(j.error||''); st.className='status error'; }
   } catch(e) { document.getElementById('status-v').textContent='Error de conexión.'; document.getElementById('status-v').className='status error'; }
@@ -877,7 +913,7 @@ function exportCSV() {
 }
 
 // Navegación teclado ventas
-['v-fecha','v-efectivo','v-tarjeta','v-transfer','v-rappi'].forEach((id,i,arr)=>{
+['v-fecha','v-efectivo','v-tarjeta','v-transfer','v-rappi','v-propinas','v-envio'].forEach((id,i,arr)=>{
   const el=document.getElementById(id); if(!el)return;
   if(el.type!=='date') el.addEventListener('input',function(){this.value=this.value.replace(/[^0-9.]/g,'');});
   el.addEventListener('keydown',e=>{
