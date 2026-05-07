@@ -500,7 +500,7 @@ tbody tr{animation:fadeIn .2s ease;}
 </div>
 
 <script>
-const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbz4Q6Oy25IGOhJC4veUCtsh8w3cOkdtrefnPt0QNfgjnXUIcyr-tQQNjt0yDOunX7EB/exec";
+const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbyI_9KViYNw-23JGFRgD_cL37UBrdyPdLkn4arwhDsMjCN98LEra2E-P3N9ZP45_Sfo/exec";
 const GOOGLE_CLIENT_ID = "280797416294-m1q3nggftt0cpa06ljilpmmcu6gv967g.apps.googleusercontent.com";
 const C_TARJETA = 0.035, C_RAPPI = 0.18;
 
@@ -630,23 +630,25 @@ async function onGoogleLogin(response) {
   msg.textContent = 'Verificando cuenta...';
 
   try {
-    // Decodificar el JWT para obtener el correo
-    const payload = JSON.parse(atob(response.credential.split('.')[1]));
-    const correo  = payload.email;
+    // Decodificar el JWT — el email está en el payload (parte central del token)
+    const parts   = response.credential.split('.');
+    const payload = JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/')));
+    const correo  = (payload.email || '').toLowerCase().trim();
 
-    // Verificar con el Apps Script que el correo está autorizado
-    const r = await fetch(SCRIPT_URL + '?accion=verificarToken&token=' + encodeURIComponent(response.credential) + '&correo=' + encodeURIComponent(correo));
+    if (!correo) { msg.textContent = '⛔ No se pudo obtener el correo'; return; }
+
+    // Verificar directamente con el Apps Script
+    const r = await fetch(SCRIPT_URL + '?accion=verificarToken&correo=' + encodeURIComponent(correo));
     const d = await r.json();
 
     if (d.ok) {
       usuarioActual = {
         usuario: d.usuario,
         perfil:  d.perfil,
-        correo:  d.correo,
+        correo:  correo,
         token:   response.credential
       };
       msg.textContent = '';
-      // Ir a pantalla de PIN
       document.getElementById('pin-bienvenida').textContent = 'Hola, ' + d.usuario;
       irA('pin-screen');
     } else {
