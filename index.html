@@ -254,10 +254,10 @@ tbody tr{animation:fadeIn .2s ease;}
   <div class="menu-card">
     <h2>¿Qué deseas hacer?</h2>
     <p>Selecciona un módulo para continuar</p>
-    <div class="menu-btns">
-      <button class="menu-btn" onclick="irA('ventas-screen')"><span class="micon">💰</span> Ingresar ventas</button>
-      <button class="menu-btn" onclick="irA('gastos-screen')"><span class="micon">🧾</span> Ingresar gastos</button>
-      <button class="menu-btn" onclick="irA('analisis-screen')"><span class="micon">📊</span> Analizar ganancias</button>
+    <div class="menu-btns" id="menu-btns">
+      <button class="menu-btn" id="mbtn-ventas"   onclick="irA('ventas-screen')"><span class="micon">💰</span> Ingresar ventas</button>
+      <button class="menu-btn" id="mbtn-gastos"   onclick="irA('gastos-screen')"><span class="micon">🧾</span> Ingresar gastos</button>
+      <button class="menu-btn" id="mbtn-analisis" onclick="irA('analisis-screen')"><span class="micon">📊</span> Analizar ganancias</button>
       <button class="menu-btn" onclick="cerrarSesion()" style="font-size:14px;color:var(--muted);border-style:dashed"><span class="micon">🚪</span> Cerrar sesión</button>
     </div>
   </div>
@@ -343,7 +343,7 @@ tbody tr{animation:fadeIn .2s ease;}
       <div class="status" id="status-v"></div>
     </div>
     <div class="right-panel">
-      <div class="resumen-card">
+      <div class="resumen-card" id="resumen-v">
         <div class="tabs">
           <button class="tab active" onclick="setTabV('semana')">Esta semana</button>
           <button class="tab" onclick="setTabV('quincena')">Quincena</button>
@@ -379,7 +379,7 @@ tbody tr{animation:fadeIn .2s ease;}
         </div>
       </div>
       <div class="table-card">
-        <div class="table-header"><h2>Registros</h2><button class="btn-csv" onclick="exportCSV()">Exportar CSV</button></div>
+        <div class="table-header"><h2>Registros</h2><button class="btn-csv" id="btn-csv-v" onclick="exportCSV()">Exportar CSV</button></div>
         <div class="table-wrap">
           <table>
             <thead><tr><th>Fecha</th><th>Efectivo</th><th>Tarjeta</th><th>Transfer.</th><th>Rappi</th><th></th></tr></thead>
@@ -606,6 +606,27 @@ function fmtPeriodo(desde, hasta) {
 }
 
 // ── Navegación ────────────────────────────────────────────────
+  // ── Permisos por perfil ─────────────────────────────────────
+  function aplicarPermisos() {
+    const perfil = (usuarioActual ? usuarioActual.perfil : '').toLowerCase().trim();
+    const esAdmin = perfil === 'admin';
+    const esCaja  = perfil === 'caja';
+
+    // Menú — ocultar Gastos para Caja, ocultar Análisis para no-Admin
+    const btnGastos   = document.getElementById('mbtn-gastos');
+    const btnAnalisis = document.getElementById('mbtn-analisis');
+    if (btnGastos)   btnGastos.style.display   = esCaja  ? 'none' : 'flex';
+    if (btnAnalisis) btnAnalisis.style.display = esAdmin ? 'flex' : 'none';
+
+    // Ventas — ocultar resumen de tabs para Caja
+    const resumenV = document.getElementById('resumen-v');
+    if (resumenV) resumenV.style.display = esCaja ? 'none' : 'block';
+
+    // Ventas — ocultar CSV para Caja
+    const btnCsvV = document.getElementById('btn-csv-v');
+    if (btnCsvV) btnCsvV.style.display = esCaja ? 'none' : 'inline-block';
+  }
+
 function cerrarSesion() {
   localStorage.removeItem('vu_correo');
   localStorage.removeItem('vu_usuario');
@@ -618,6 +639,7 @@ function cerrarSesion() {
 function irA(screenId) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('activo'));
   document.getElementById(screenId).classList.add('activo');
+  if (screenId==='menu-screen')     aplicarPermisos();
   if (screenId==='ventas-screen')   iniciarVentas();
   if (screenId==='gastos-screen')   iniciarGastos();
   if (screenId==='analisis-screen') iniciarAnalisis();
@@ -730,6 +752,7 @@ async function verificarPin() {
         usuarioActual.perfil  = d.perfil;
       }
       irA('menu-screen');
+      aplicarPermisos();
     } else {
       pintarDots(true);
       msg.textContent = 'PIN incorrecto';
@@ -861,15 +884,18 @@ async function cargarVentas() {
 }
 
 function renderTablaVentas() {
+  const esCaja = usuarioActual && usuarioActual.perfil.toLowerCase() === 'caja';
   const tb=document.getElementById('tbody-v');
   tb.innerHTML='';
   if (!ventasRows.length) { tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--muted)">Sin registros aún</td></tr>'; return; }
+  const csvV = document.getElementById('btn-csv-v');
+  if (csvV) csvV.style.display = esCaja ? 'none' : 'inline-block';
   [...ventasRows].reverse().slice(0,7).forEach(r=>{
     const tr=document.createElement('tr');
     const fotoBtnV = r.linkFoto
       ? `<button onclick="verFoto('${extraerFileId(r.linkFoto)}')" style="background:none;border:none;cursor:pointer;font-size:18px;margin-right:4px" title="Ver foto">📷</button>`
       : '';
-    tr.innerHTML=`<td>${labelFecha(r.fecha)}</td><td>${fmtN(r.efectivo)}</td><td>${fmtN(r.tarjeta)}</td><td>${fmtN(r.transferencia)}</td><td>${fmtN(r.rappi)}</td><td style="text-align:center;white-space:nowrap">${fotoBtnV}<button class="btn-corregir" onclick="corregirVenta('${r.fecha}')">Corregir</button></td>`;
+    tr.innerHTML=`<td>${labelFecha(r.fecha)}</td><td>${fmtN(r.efectivo)}</td><td>${fmtN(r.tarjeta)}</td><td>${fmtN(r.transferencia)}</td><td>${fmtN(r.rappi)}</td><td style="text-align:center;white-space:nowrap">${fotoBtnV}${esCaja ? '' : `<button class="btn-corregir btn-corregir-v" onclick="corregirVenta('${r.fecha}')">Corregir</button>`}</td>`;
     tb.appendChild(tr);
   });
 }
