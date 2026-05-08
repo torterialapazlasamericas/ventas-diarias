@@ -74,6 +74,24 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   header h1{font-size:18px;}
 }
 
+/* ── Wizard ventas ── */
+.vw-container {
+  position:relative;
+  overflow:hidden;
+  min-height:420px;
+}
+.vw-step {
+  position:absolute;
+  top:0; left:0; right:0;
+  transition: transform .35s cubic-bezier(.4,0,.2,1), opacity .35s;
+  will-change: transform;
+}
+.vw-step.activo    { transform:translateX(0);     opacity:1;   position:relative; }
+.vw-step.sale-izq  { transform:translateX(-100%); opacity:0; }
+.vw-step.sale-der  { transform:translateX(100%);  opacity:0; }
+.vw-step.entra-der { transform:translateX(100%);  opacity:0; }
+.vw-step.entra-izq { transform:translateX(-100%); opacity:0; }
+
 /* ── Sección gastos del día ── */
 .field-section-label {
   font-size:11px; font-weight:500; text-transform:uppercase;
@@ -325,9 +343,10 @@ tbody tr{animation:fadeIn .2s ease;}
   </div>
 
   <div style="max-width:480px;margin:0 auto;padding:1.5rem 1rem">
+    <div class="vw-container">
 
     <!-- ═══ PASO 1: VENTAS ═══ -->
-    <div id="vw-paso1">
+    <div id="vw-paso1" class="vw-step activo">
       <h2 style="font-family:'DM Serif Display',serif;font-weight:400;font-size:20px;margin-bottom:1.25rem">💰 Datos de ventas</h2>
       <div class="field"><label>Fecha</label><input type="date" id="v-fecha"/></div>
       <div class="field"><label>Efectivo</label><input type="text" inputmode="decimal" id="v-efectivo" placeholder="0" autocomplete="off"/></div>
@@ -341,7 +360,7 @@ tbody tr{animation:fadeIn .2s ease;}
     </div>
 
     <!-- ═══ PASO 2: GASTOS DEL DÍA ═══ -->
-    <div id="vw-paso2" style="display:none">
+    <div id="vw-paso2" class="vw-step sale-der">
       <h2 style="font-family:'DM Serif Display',serif;font-weight:400;font-size:20px;margin-bottom:1.25rem">🧾 Gastos del día</h2>
       <div class="field"><label>Propinas</label><input type="text" inputmode="decimal" id="v-propinas" placeholder="0" autocomplete="off"/></div>
       <div class="field"><label>Envío a domicilio</label><input type="text" inputmode="decimal" id="v-envio" placeholder="0" autocomplete="off"/></div>
@@ -352,7 +371,7 @@ tbody tr{animation:fadeIn .2s ease;}
     </div>
 
     <!-- ═══ PASO 3: CONSUMO EN VENTA ═══ -->
-    <div id="vw-paso3" style="display:none">
+    <div id="vw-paso3" class="vw-step sale-der">
       <h2 style="font-family:'DM Serif Display',serif;font-weight:400;font-size:20px;margin-bottom:.5rem">📦 Consumo en venta</h2>
       <p style="font-size:13px;color:var(--muted);margin-bottom:1.25rem">Ingresa las cantidades usadas hoy. Deja en 0 si no se usó.</p>
       <div id="vw-productos-list"></div>
@@ -363,7 +382,7 @@ tbody tr{animation:fadeIn .2s ease;}
     </div>
 
     <!-- ═══ PASO 4: FOTO ═══ -->
-    <div id="vw-paso4" style="display:none">
+    <div id="vw-paso4" class="vw-step sale-der">
       <h2 style="font-family:'DM Serif Display',serif;font-weight:400;font-size:20px;margin-bottom:.5rem">📷 Foto de nota</h2>
       <p style="font-size:13px;color:var(--muted);margin-bottom:1.25rem">Adjunta la foto de la nota del día (opcional).</p>
 
@@ -386,7 +405,8 @@ tbody tr{animation:fadeIn .2s ease;}
       <div class="status" id="vw-status4"></div>
     </div>
 
-  </div>
+  </div><!-- /vw-container -->
+  </div><!-- /padding div -->
 
   <!-- Panel derecho: tabla de registros (mantener) -->
   <div id="resumen-v" style="max-width:900px;margin:0 auto;padding:0 1rem 2rem">
@@ -2408,14 +2428,48 @@ function iniciarVentas() {
   else { renderTablaVentas(); renderResumenV(); }
 }
 
-function vwIrPaso(paso) {
-  [1,2,3,4].forEach(p => {
-    const el = document.getElementById('vw-paso' + p);
-    if (el) el.style.display = p === paso ? 'block' : 'none';
+let _vwPasoActual = 1;
+
+function vwIrPaso(paso, direccion) {
+  const anterior = _vwPasoActual;
+  const esAdelante = direccion !== undefined ? direccion : paso > anterior;
+  const elAnt = document.getElementById('vw-paso' + anterior);
+  const elNvo = document.getElementById('vw-paso' + paso);
+  if (!elNvo) return;
+
+  // Preparar nuevo paso fuera de la vista
+  elNvo.classList.remove('activo','sale-izq','sale-der','entra-izq','entra-der');
+  elNvo.classList.add(esAdelante ? 'entra-der' : 'entra-izq');
+  elNvo.style.display = 'block';
+
+  // Forzar reflow para que la animación funcione
+  elNvo.getBoundingClientRect();
+
+  // Animar salida del paso actual
+  if (elAnt) {
+    elAnt.classList.remove('activo');
+    elAnt.classList.add(esAdelante ? 'sale-izq' : 'sale-der');
+    setTimeout(() => {
+      elAnt.style.display = 'none';
+      elAnt.classList.remove('sale-izq','sale-der');
+    }, 360);
+  }
+
+  // Animar entrada del nuevo paso
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      elNvo.classList.remove('entra-der','entra-izq');
+      elNvo.classList.add('activo');
+    });
   });
+
+  _vwPasoActual = paso;
   document.getElementById('vw-paso-ind').textContent = 'Paso ' + paso + ' de 4';
   document.getElementById('vw-progreso').style.width = (paso * 25) + '%';
-  window.scrollTo({top:0, behavior:'smooth'});
+
+  // Scroll suave al header del wizard
+  const header = document.querySelector('#ventas-screen .mod-header');
+  if (header) header.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 function vwSiguiente(pasoActual) {
@@ -2439,18 +2493,18 @@ function vwSiguiente(pasoActual) {
       st.className = 'status error'; return;
     }
     st.textContent = ''; st.className = 'status';
-    vwIrPaso(2);
+    vwIrPaso(2, true);
 
   } else if (pasoActual === 2) {
-    vwIrPaso(3);
+    vwIrPaso(3, true);
 
   } else if (pasoActual === 3) {
-    vwIrPaso(4);
+    vwIrPaso(4, true);
   }
 }
 
 function vwRegresar(pasoActual) {
-  vwIrPaso(pasoActual - 1);
+  vwIrPaso(pasoActual - 1, false); // hacia la izquierda = atrás
 }
 
 function vwRenderProductos() {
@@ -2593,7 +2647,7 @@ async function vwGuardar() {
       });
       vwQuitarFoto();
       vwRenderProductos();
-      vwIrPaso(1);
+      vwIrPaso(1, false);
       document.getElementById('vw-status1').textContent = '';
       document.getElementById('vw-status4').textContent = '';
     }, 1500);
