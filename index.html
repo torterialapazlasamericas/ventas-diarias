@@ -2005,12 +2005,12 @@ function invRenderStock() {
     return true;
   });
 
-  // Métricas
-  const valorTotal = invInsumos.reduce((a,i) => a + toNum(i.precio)*toNum(i.stock), 0);
-  document.getElementById('inv-m-total').textContent = invInsumos.length;
+  // Métricas — usan la lista filtrada (por grupo/búsqueda)
+  const valorTotal = lista.reduce((a,i) => a + toNum(i.precio)*toNum(i.stock), 0);
+  document.getElementById('inv-m-total').textContent = lista.length;
   document.getElementById('inv-m-valor').textContent = fmtM(valorTotal);
-  document.getElementById('inv-m-bajo').textContent  = invInsumos.filter(i=>i.stock>0&&i.stock<=2).length;
-  document.getElementById('inv-m-sin').textContent   = invInsumos.filter(i=>i.stock<=0).length;
+  document.getElementById('inv-m-bajo').textContent  = lista.filter(i=>i.stock>0&&i.stock<=2).length;
+  document.getElementById('inv-m-sin').textContent   = lista.filter(i=>i.stock<=0).length;
 
   if (!lista.length) { div.innerHTML='<div style="text-align:center;padding:2rem;color:var(--muted)">Sin resultados</div>'; return; }
 
