@@ -316,78 +316,128 @@ tbody tr{animation:fadeIn .2s ease;}
   <div class="mod-header">
     <button class="nav-back" onclick="irA('menu-screen')">← Menú</button>
     <h1>Registro de ventas</h1>
-    <span id="hdr-ventas"></span>
+    <span id="vw-paso-ind" style="font-size:13px;color:var(--muted)">Paso 1 de 4</span>
   </div>
-  <div class="layout">
-    <div class="form-card">
-      <h2>Nueva entrada</h2>
+
+  <!-- Barra de progreso -->
+  <div style="height:4px;background:var(--border);margin:0 0 0 0">
+    <div id="vw-progreso" style="height:4px;background:var(--accent);transition:width .3s;width:25%"></div>
+  </div>
+
+  <div style="max-width:480px;margin:0 auto;padding:1.5rem 1rem">
+
+    <!-- ═══ PASO 1: VENTAS ═══ -->
+    <div id="vw-paso1">
+      <h2 style="font-family:'DM Serif Display',serif;font-weight:400;font-size:20px;margin-bottom:1.25rem">💰 Datos de ventas</h2>
       <div class="field"><label>Fecha</label><input type="date" id="v-fecha"/></div>
       <div class="field"><label>Efectivo</label><input type="text" inputmode="decimal" id="v-efectivo" placeholder="0" autocomplete="off"/></div>
       <div class="field"><label>Tarjeta</label><input type="text" inputmode="decimal" id="v-tarjeta" placeholder="0" autocomplete="off"/></div>
       <div class="field"><label>Transferencia</label><input type="text" inputmode="decimal" id="v-transfer" placeholder="0" autocomplete="off"/></div>
       <div class="field"><label>Rappi</label><input type="text" inputmode="decimal" id="v-rappi" placeholder="0" autocomplete="off"/></div>
-      <div class="field-section-label">Gastos del día</div>
+      <div class="status" id="vw-status1"></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:.5rem">
+        <button class="btn-primary" style="width:auto;padding:11px 32px" onclick="vwSiguiente(1)">Siguiente →</button>
+      </div>
+    </div>
+
+    <!-- ═══ PASO 2: GASTOS DEL DÍA ═══ -->
+    <div id="vw-paso2" style="display:none">
+      <h2 style="font-family:'DM Serif Display',serif;font-weight:400;font-size:20px;margin-bottom:1.25rem">🧾 Gastos del día</h2>
       <div class="field"><label>Propinas</label><input type="text" inputmode="decimal" id="v-propinas" placeholder="0" autocomplete="off"/></div>
       <div class="field"><label>Envío a domicilio</label><input type="text" inputmode="decimal" id="v-envio" placeholder="0" autocomplete="off"/></div>
-      <!-- Foto nota de venta -->
-      <div class="foto-area">
-        <input type="file" id="foto-input-v" accept="image/*" capture="environment" style="display:none" onchange="previsualizarFoto('v')"/>
-        <button type="button" class="btn-camara" onclick="document.getElementById('foto-input-v').click()">
-          📷 Adjuntar foto de nota
-        </button>
-        <div class="foto-preview" id="foto-preview-v">
-          <img id="foto-img-v" src="" alt="Foto nota"/>
-          <button class="foto-del" onclick="quitarFoto('v')" title="Quitar foto">✕</button>
-          <div class="foto-label" id="foto-label-v"></div>
-        </div>
+      <div style="display:flex;gap:10px;margin-top:.5rem">
+        <button class="btn-primary" style="flex:1;background:var(--bg);color:var(--muted);border:1px solid var(--border)" onclick="vwRegresar(2)">← Regresar</button>
+        <button class="btn-primary" style="flex:2" onclick="vwSiguiente(2)">Siguiente →</button>
       </div>
-      <button class="btn-primary" id="btn-v" onclick="abrirModalVenta()">Guardar</button>
-      <div class="status" id="status-v"></div>
     </div>
-    <div class="right-panel">
-      <div class="resumen-card" id="resumen-v">
-        <div class="tabs">
-          <button class="tab active" onclick="setTabV('semana')">Esta semana</button>
-          <button class="tab" onclick="setTabV('quincena')">Quincena</button>
-          <button class="tab" onclick="setTabV('mes')">Este mes</button>
-          <button class="tab" onclick="setTabV('custom')">Personalizado</button>
-        </div>
-        <div class="resumen-body">
-          <div class="periodo-label" id="plabel-v"></div>
-          <div id="custom-v" style="display:none">
-            <div class="custom-range">
-              <input type="date" id="v-desde"/>
-              <span style="color:var(--muted);font-size:13px">al</span>
-              <input type="date" id="v-hasta"/>
-              <button class="btn-buscar" onclick="renderResumenV()">Buscar</button>
-            </div>
-          </div>
-          <div class="resumen-grid" style="margin-bottom:12px">
-            <div class="rmetric dest"><div class="rl">Venta total sin Rappi</div><div class="rv green" id="rv-h">—</div></div>
-            <div class="rmetric dest"><div class="rl">Venta total con Rappi</div><div class="rv blue" id="rv-j">—</div></div>
-          </div>
-          <div class="resumen-divider">Desglose por forma de pago</div>
-          <div class="resumen-grid">
-            <div class="rmetric"><div class="rl">Efectivo</div><div class="rv" id="rv-ef">—</div></div>
-            <div class="rmetric"><div class="rl">Transferencia</div><div class="rv" id="rv-tr">—</div></div>
-            <div class="rmetric"><div class="rl">Tarjeta sin com.</div><div class="rv" id="rv-tsin">—</div></div>
-            <div class="rmetric"><div class="rl">Tarjeta con com.</div><div class="rv" id="rv-tcon">—</div></div>
-            <div class="rmetric"><div class="rl">Rappi sin com.</div><div class="rv" id="rv-rsin">—</div></div>
-            <div class="rmetric"><div class="rl">Rappi con com.</div><div class="rv" id="rv-rcon">—</div></div>
-          </div>
-          <div class="resumen-grid" style="margin-top:12px">
-            <div class="rmetric" style="grid-column:1/-1"><div class="rl">Promedio venta total (col J)</div><div class="rv" id="rv-prom">—</div></div>
-          </div>
+
+    <!-- ═══ PASO 3: CONSUMO EN VENTA ═══ -->
+    <div id="vw-paso3" style="display:none">
+      <h2 style="font-family:'DM Serif Display',serif;font-weight:400;font-size:20px;margin-bottom:.5rem">📦 Consumo en venta</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:1.25rem">Ingresa las cantidades usadas hoy. Deja en 0 si no se usó.</p>
+      <div id="vw-productos-list"></div>
+      <div style="display:flex;gap:10px;margin-top:.5rem">
+        <button class="btn-primary" style="flex:1;background:var(--bg);color:var(--muted);border:1px solid var(--border)" onclick="vwRegresar(3)">← Regresar</button>
+        <button class="btn-primary" style="flex:2" onclick="vwSiguiente(3)">Siguiente →</button>
+      </div>
+    </div>
+
+    <!-- ═══ PASO 4: FOTO ═══ -->
+    <div id="vw-paso4" style="display:none">
+      <h2 style="font-family:'DM Serif Display',serif;font-weight:400;font-size:20px;margin-bottom:.5rem">📷 Foto de nota</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:1.25rem">Adjunta la foto de la nota del día (opcional).</p>
+
+      <div id="vw-foto-preview" style="display:none;margin-bottom:1rem;text-align:center">
+        <img id="vw-foto-img" style="max-width:100%;max-height:220px;border-radius:10px;object-fit:contain" src="" alt="Foto"/>
+        <div style="margin-top:8px">
+          <button class="btn-corregir" onclick="vwQuitarFoto()" style="color:var(--danger);border-color:var(--danger)">✕ Quitar foto</button>
         </div>
       </div>
-      <div class="table-card">
-        <div class="table-header"><h2>Registros</h2><button class="btn-csv" id="btn-csv-v" onclick="exportCSV()">Exportar CSV</button></div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Fecha</th><th>Efectivo</th><th>Tarjeta</th><th>Transfer.</th><th>Rappi</th><th></th></tr></thead>
-            <tbody id="tbody-v"><tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--muted)"><span class="spin"></span>Cargando...</td></tr></tbody>
-          </table>
+
+      <div id="vw-foto-btn-wrap" style="text-align:center;margin-bottom:1.5rem">
+        <label for="vw-foto-input" class="btn-primary" style="display:inline-block;width:auto;padding:11px 28px;cursor:pointer">📷 Tomar / Adjuntar foto</label>
+        <input type="file" id="vw-foto-input" accept="image/*" capture="environment" style="display:none" onchange="vwSeleccionarFoto(event)"/>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:.5rem">
+        <button class="btn-primary" style="flex:1;background:var(--bg);color:var(--muted);border:1px solid var(--border)" onclick="vwRegresar(4)">← Regresar</button>
+        <button class="btn-primary" style="flex:2" onclick="vwGuardar()">Guardar datos</button>
+      </div>
+      <div class="status" id="vw-status4"></div>
+    </div>
+
+  </div>
+
+  <!-- Panel derecho: tabla de registros (mantener) -->
+  <div id="resumen-v" style="max-width:900px;margin:0 auto;padding:0 1rem 2rem">
+    <div class="resumen-card">
+      <div class="tabs">
+        <button class="tab active" onclick="setTabV('semana')">Esta semana</button>
+        <button class="tab" onclick="setTabV('quincena')">Quincena</button>
+        <button class="tab" onclick="setTabV('mes')">Este mes</button>
+        <button class="tab" onclick="setTabV('custom')">Personalizado</button>
+      </div>
+      <div id="custom-v" style="display:none;padding:.75rem 0 0">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="date" id="v-desde"/>
+          <span style="color:var(--muted)">—</span>
+          <input type="date" id="v-hasta"/>
+          <button class="btn-corregir" onclick="renderResumenV()">Buscar</button>
         </div>
+      </div>
+      <div class="resumen-body">
+        <div class="resumen-grid">
+          <div class="rmetric"><div class="rl">Efectivo</div><div class="rv" id="rv-ef"></div></div>
+          <div class="rmetric"><div class="rl">Tarjeta s/com.</div><div class="rv" id="rv-tj"></div></div>
+          <div class="rmetric"><div class="rl">Tarjeta c/com.</div><div class="rv" id="rv-tcon"></div></div>
+          <div class="rmetric"><div class="rl">Transferencia</div><div class="rv" id="rv-tr"></div></div>
+          <div class="rmetric"><div class="rl">Rappi s/com.</div><div class="rv" id="rv-rsin"></div></div>
+          <div class="rmetric"><div class="rl">Rappi c/com.</div><div class="rv" id="rv-rcon"></div></div>
+          <div class="rmetric"><div class="rl">Tarjeta s/com (tot)</div><div class="rv" id="rv-tsin"></div></div>
+          <div class="rmetric"><div class="rl">Total sin comisión</div><div class="rv" id="rv-sc"></div></div>
+          <div class="rmetric"><div class="rl">Total con comisión</div><div class="rv green" id="rv-j"></div></div>
+          <div class="rmetric"><div class="rl">Promedio diario</div><div class="rv" id="rv-prom"></div></div>
+        </div>
+        <!-- IDs ocultos para compatibilidad -->
+        <span id="rv-h" style="display:none"></span>
+        <span id="rv-ra" style="display:none"></span>
+      </div>
+    </div>
+
+    <div class="table-card" style="margin-top:1rem">
+      <div class="table-header">
+        <h2>Últimos registros</h2>
+        <button class="btn-csv" id="btn-csv-v" onclick="exportCSV()">Exportar CSV</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th style="text-align:left">Fecha</th>
+            <th>Efectivo</th><th>Tarjeta</th><th>Transfer.</th><th>Rappi</th>
+            <th>Acciones</th>
+          </tr></thead>
+          <tbody id="tbody-v"></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -772,6 +822,12 @@ tbody tr{animation:fadeIn .2s ease;}
   </div>
 </div>
 
+
+<!-- IDs de compatibilidad -->
+<span id="status-v" style="display:none"></span>
+<span id="hdr-ventas" style="display:none"></span>
+<span id="plabel-v" style="display:none"></span>
+<span id="btn-v" style="display:none"></span>
 
 <script>
 const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbykcDiW-bCujg7gXUJciqLw_YkEADDF6QGLpV1PX3ZgeiPI9YGBHbqROIGoqzytNXU/exec";
@@ -2313,6 +2369,238 @@ async function invAgregarInsumo() {
     document.getElementById('inv-n-categoria').value = 'ambos';
     invPoblarFiltros(); invRenderGestion();
   } catch(e) { st.textContent='Error guardando.'; st.className='status error'; }
+}
+
+// ══════════════ WIZARD VENTAS ════════════════════════════════
+// Productos de venta para el paso 3
+const VW_PRODUCTOS = [
+  'Pan tradicional',
+  'Pan mac',
+  'Refrescos',
+  'Lechitas',
+  'Jamaicas',
+  'Refresco desechable',
+  'Agua',
+  'Agua mineral',
+  'Coca cola sin azúcar'
+];
+
+let vwFotoData = null;  // base64 de la foto
+
+function iniciarVentas() {
+  // Ir al paso 1 siempre
+  vwIrPaso(1);
+  vwFotoData = null;
+  // Fecha por defecto = hoy
+  const hoy = new Date();
+  const iso  = dateToIso(hoy);
+  document.getElementById('v-fecha').value = iso;
+  // Limpiar campos
+  ['v-efectivo','v-tarjeta','v-transfer','v-rappi','v-propinas','v-envio'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('vw-status1').textContent = '';
+  document.getElementById('vw-status4').textContent = '';
+  // Renderizar productos paso 3
+  vwRenderProductos();
+  // Cargar datos si hay
+  if (!ventasRows.length) cargarVentas();
+  else { renderTablaVentas(); renderResumenV(); }
+}
+
+function vwIrPaso(paso) {
+  [1,2,3,4].forEach(p => {
+    const el = document.getElementById('vw-paso' + p);
+    if (el) el.style.display = p === paso ? 'block' : 'none';
+  });
+  document.getElementById('vw-paso-ind').textContent = 'Paso ' + paso + ' de 4';
+  document.getElementById('vw-progreso').style.width = (paso * 25) + '%';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function vwSiguiente(pasoActual) {
+  if (pasoActual === 1) {
+    // Validar paso 1
+    const fecha    = document.getElementById('v-fecha').value;
+    const efectivo = parseFloat(document.getElementById('v-efectivo').value)||0;
+    const tarjeta  = parseFloat(document.getElementById('v-tarjeta').value)||0;
+    const transfer = parseFloat(document.getElementById('v-transfer').value)||0;
+    const rappi    = parseFloat(document.getElementById('v-rappi').value)||0;
+    const st       = document.getElementById('vw-status1');
+
+    if (!fecha) { st.textContent='Ingresa una fecha.'; st.className='status error'; return; }
+    if (!efectivo && !tarjeta && !transfer && !rappi) {
+      st.textContent='Ingresa al menos un monto.'; st.className='status error'; return;
+    }
+    // Verificar fecha duplicada
+    const yaExiste = ventasRows.some(r => r.fecha === fecha);
+    if (yaExiste) {
+      st.textContent = '⚠️ Ya existe un registro para el ' + labelFecha(fecha) + '. Usa "Corregir" para editarlo.';
+      st.className = 'status error'; return;
+    }
+    st.textContent = ''; st.className = 'status';
+    vwIrPaso(2);
+
+  } else if (pasoActual === 2) {
+    vwIrPaso(3);
+
+  } else if (pasoActual === 3) {
+    vwIrPaso(4);
+  }
+}
+
+function vwRegresar(pasoActual) {
+  vwIrPaso(pasoActual - 1);
+}
+
+function vwRenderProductos() {
+  const div = document.getElementById('vw-productos-list');
+  if (!div) return;
+  div.innerHTML = VW_PRODUCTOS.map(p => `
+    <div class="field" style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+      <label style="flex:1;text-transform:none;font-size:14px;letter-spacing:0;color:var(--text);margin-bottom:0">${p}</label>
+      <input type="text" inputmode="numeric" id="vwp-${p.replace(/[^a-zA-Z0-9]/g,'_')}"
+        placeholder="0" autocomplete="off"
+        style="width:80px;text-align:center;margin-bottom:0"/>
+    </div>`).join('');
+}
+
+function vwSeleccionarFoto(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    // Comprimir
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX = 800;
+      let w = img.width, h = img.height;
+      if (w > MAX) { h = Math.round(h*MAX/w); w = MAX; }
+      if (h > MAX) { w = Math.round(w*MAX/h); h = MAX; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      vwFotoData = canvas.toDataURL('image/jpeg', 0.7);
+      document.getElementById('vw-foto-img').src = vwFotoData;
+      document.getElementById('vw-foto-preview').style.display = 'block';
+      document.getElementById('vw-foto-btn-wrap').style.display = 'none';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function vwQuitarFoto() {
+  vwFotoData = null;
+  document.getElementById('vw-foto-preview').style.display = 'none';
+  document.getElementById('vw-foto-btn-wrap').style.display = 'block';
+  document.getElementById('vw-foto-input').value = '';
+  document.getElementById('vw-foto-img').src = '';
+}
+
+async function vwGuardar() {
+  const st     = document.getElementById('vw-status4');
+  const fecha  = document.getElementById('v-fecha').value;
+  const efectivo  = parseFloat(document.getElementById('v-efectivo').value)||0;
+  const tarjeta   = parseFloat(document.getElementById('v-tarjeta').value)||0;
+  const transfer  = parseFloat(document.getElementById('v-transfer').value)||0;
+  const rappi     = parseFloat(document.getElementById('v-rappi').value)||0;
+  const propinas  = parseFloat(document.getElementById('v-propinas').value)||0;
+  const envio     = parseFloat(document.getElementById('v-envio').value)||0;
+
+  // Leer productos paso 3
+  const productosUsados = VW_PRODUCTOS.map(p => ({
+    nombre:   p,
+    cantidad: parseFloat(document.getElementById('vwp-'+p.replace(/[^a-zA-Z0-9]/g,'_'))?.value)||0
+  })).filter(p => p.cantidad > 0);
+
+  st.textContent = 'Guardando venta...'; st.className = 'status';
+
+  try {
+    // 1. Guardar venta
+    const p = new URLSearchParams({
+      accion:'agregar', fecha, efectivo, tarjeta, transferencia:transfer, rappi,
+      usuario: usuarioActual ? usuarioActual.usuario : ''
+    });
+    const r = await fetch(SCRIPT_URL + '?' + p);
+    const j = await r.json();
+    if (!j.ok) { st.textContent = 'Error: ' + j.error; st.className='status error'; return; }
+
+    // 2. Guardar propinas y envío en Gastos
+    if (propinas > 0) {
+      const pp = new URLSearchParams({accion:'agregarGasto',fecha,nombre:'Propinas',formaPago:'Efectivo',cantidad:propinas,nota:'Desde registro de ventas',usuario:usuarioActual?usuarioActual.usuario:''});
+      await fetch(SCRIPT_URL + '?' + pp);
+    }
+    if (envio > 0) {
+      const pe = new URLSearchParams({accion:'agregarGasto',fecha,nombre:'Envío a domicilio',formaPago:'Efectivo',cantidad:envio,nota:'Desde registro de ventas',usuario:usuarioActual?usuarioActual.usuario:''});
+      await fetch(SCRIPT_URL + '?' + pe);
+    }
+
+    // 3. Guardar productos usados en inventario como salidas
+    if (productosUsados.length > 0) {
+      st.textContent = 'Guardando consumo en inventario...';
+      for (const prod of productosUsados) {
+        const ins = invInsumos.find(i => i.nombre.toLowerCase() === prod.nombre.toLowerCase());
+        if (!ins) continue;
+        const now = new Date();
+        const mov = {
+          id:          'S' + now.getTime() + Math.random().toString(36).slice(2,5),
+          tipo:        'uso',
+          fecha:       fecha,
+          hora:        now.toTimeString().slice(0,5),
+          timestamp:   now.toISOString(),
+          usuario:     usuarioActual ? usuarioActual.usuario : '',
+          rol:         usuarioActual ? usuarioActual.perfil  : '',
+          insumoNombre: ins.nombre,
+          unidad:      ins.unidad,
+          cantidad:    prod.cantidad,
+          costo:       null,
+          nota:        'Consumo venta del día'
+        };
+        // Actualizar stock local
+        const ppu = parseInt(ins.piezasPorUnidad)||0;
+        const delta = ppu > 0 ? prod.cantidad / ppu : prod.cantidad;
+        const newStock = Math.max(0, +(ins.stock - delta).toFixed(4));
+        const newSPE   = ppu > 0 ? Math.round(newStock * ppu) : newStock;
+        invInsumos = invInsumos.map(i => i.id == ins.id ? {...i, stock:newStock, stockEnPiezas:newSPE} : i);
+        await fetch(INV_URL, {
+          method:'POST', headers:{'Content-Type':'text/plain'},
+          body: JSON.stringify({action:'addMovimiento', data:mov})
+        });
+      }
+      // Guardar inventario actualizado
+      await fetch(INV_URL, {
+        method:'POST', headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify({action:'saveInsumos', data:invInsumos})
+      });
+    }
+
+    // 4. Subir foto si hay
+    if (vwFotoData) {
+      st.textContent = '📷 Subiendo foto...';
+      await subirFoto(vwFotoData, fecha, 'ventas', fecha, st, usuarioActual);
+    }
+
+    // 5. Recargar y limpiar
+    st.textContent = '✅ Venta guardada correctamente.'; st.className = 'status';
+    await cargarVentas();
+    await cargarGastos();
+
+    // Limpiar wizard después de 1.5s
+    setTimeout(() => {
+      ['v-efectivo','v-tarjeta','v-transfer','v-rappi','v-propinas','v-envio'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+      });
+      vwQuitarFoto();
+      vwRenderProductos();
+      vwIrPaso(1);
+      document.getElementById('vw-status1').textContent = '';
+      document.getElementById('vw-status4').textContent = '';
+    }, 1500);
+
+  } catch(e) {
+    st.textContent = '⚠️ Error: ' + e.message; st.className = 'status error';
+  }
 }
 
 // ── Init ─────────────────────────────────────────────────────
