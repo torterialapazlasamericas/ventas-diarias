@@ -258,6 +258,7 @@ tbody tr{animation:fadeIn .2s ease;}
       <button class="menu-btn" id="mbtn-ventas"   onclick="irA('ventas-screen')"><span class="micon">💰</span> Ingresar ventas</button>
       <button class="menu-btn" id="mbtn-gastos"   onclick="irA('gastos-screen')"><span class="micon">🧾</span> Ingresar gastos</button>
       <button class="menu-btn" id="mbtn-analisis" onclick="irA('analisis-screen')"><span class="micon">📊</span> Analizar ganancias</button>
+      <button class="menu-btn" id="mbtn-inv"      onclick="irA('inv-screen')"><span class="micon">📦</span> Inventario</button>
       <button class="menu-btn" id="mbtn-admin"    onclick="irA('admin-screen')"><span class="micon">👥</span> Administrar perfiles</button>
       <button class="menu-btn" onclick="cerrarSesion()" style="font-size:14px;color:var(--muted);border-style:dashed"><span class="micon">🚪</span> Cerrar sesión</button>
     </div>
@@ -593,8 +594,130 @@ tbody tr{animation:fadeIn .2s ease;}
   </div>
 </div>
 
+<!-- ══ INVENTARIO ══ -->
+<div id="inv-screen" class="screen">
+  <div class="mod-header">
+    <button class="nav-back" onclick="irA('menu-screen')">← Menú</button>
+    <h1>Inventario</h1>
+    <span id="inv-header-fecha"></span>
+  </div>
+  <div style="max-width:980px;margin:0 auto;padding:1.5rem">
+
+    <!-- TABS PRINCIPALES -->
+    <div class="resumen-card" style="margin-bottom:1.25rem">
+      <div class="tabs">
+        <button class="tab active" id="inv-tab-stock"   onclick="setInvTab('stock')">📋 Stock actual</button>
+        <button class="tab"        id="inv-tab-entrada" onclick="setInvTab('entrada')">📥 Entrada</button>
+        <button class="tab"        id="inv-tab-salida"  onclick="setInvTab('salida')">📤 Salida</button>
+        <button class="tab"        id="inv-tab-movs"    onclick="setInvTab('movs')">📊 Movimientos</button>
+      </div>
+
+      <!-- TAB: STOCK ACTUAL -->
+      <div id="inv-panel-stock" class="resumen-body">
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+          <input type="text" id="inv-buscar" placeholder="Buscar producto..." style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg);outline:none" oninput="filtrarStock()"/>
+          <select id="inv-filtro-grupo" onchange="filtrarStock()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg)">
+            <option value="">Todos los grupos</option>
+          </select>
+        </div>
+        <!-- Métricas resumen -->
+        <div class="resumen-grid" style="margin-bottom:12px">
+          <div class="rmetric"><div class="rl">Productos</div><div class="rv" id="inv-total-prod">—</div></div>
+          <div class="rmetric"><div class="rl">Valor total</div><div class="rv green" id="inv-valor-total">—</div></div>
+          <div class="rmetric"><div class="rl">Stock bajo</div><div class="rv" style="color:var(--danger)" id="inv-stock-bajo">—</div></div>
+          <div class="rmetric"><div class="rl">Sin stock</div><div class="rv" style="color:var(--danger)" id="inv-sin-stock">—</div></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th style="text-align:left">Producto</th>
+              <th style="text-align:left">Grupo</th>
+              <th>Unidad</th>
+              <th>Stock</th>
+              <th>Piezas</th>
+              <th>Precio</th>
+              <th>Valor</th>
+            </tr></thead>
+            <tbody id="inv-tbody-stock"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB: ENTRADA -->
+      <div id="inv-panel-entrada" class="resumen-body" style="display:none">
+        <div style="max-width:420px">
+          <div class="field"><label>Fecha</label><input type="date" id="inv-e-fecha"/></div>
+          <div class="field"><label>Producto</label>
+            <select id="inv-e-producto" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:15px;background:var(--bg)">
+              <option value="">Selecciona producto...</option>
+            </select>
+          </div>
+          <div class="field"><label>Cantidad</label><input type="text" inputmode="decimal" id="inv-e-cantidad" placeholder="0" autocomplete="off"/></div>
+          <div class="field"><label>Costo unitario (opcional)</label><input type="text" inputmode="decimal" id="inv-e-costo" placeholder="0" autocomplete="off"/></div>
+          <div class="field"><label>Nota</label><input type="text" id="inv-e-nota" placeholder="Opcional..." autocomplete="off"/></div>
+          <button class="btn-primary" onclick="registrarMovimiento('entrada')">Registrar entrada</button>
+          <div class="status" id="inv-e-status"></div>
+        </div>
+      </div>
+
+      <!-- TAB: SALIDA -->
+      <div id="inv-panel-salida" class="resumen-body" style="display:none">
+        <div style="max-width:420px">
+          <div class="field"><label>Fecha</label><input type="date" id="inv-s-fecha"/></div>
+          <div class="field"><label>Producto</label>
+            <select id="inv-s-producto" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:15px;background:var(--bg)">
+              <option value="">Selecciona producto...</option>
+            </select>
+          </div>
+          <div class="field"><label>Cantidad</label><input type="text" inputmode="decimal" id="inv-s-cantidad" placeholder="0" autocomplete="off"/></div>
+          <div class="field"><label>Motivo</label>
+            <select id="inv-s-motivo" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:15px;background:var(--bg)">
+              <option value="uso">Uso en cocina</option>
+              <option value="venta">Venta</option>
+              <option value="merma">Merma</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div class="field"><label>Nota</label><input type="text" id="inv-s-nota" placeholder="Opcional..." autocomplete="off"/></div>
+          <button class="btn-primary" onclick="registrarMovimiento('salida')">Registrar salida</button>
+          <div class="status" id="inv-s-status"></div>
+        </div>
+      </div>
+
+      <!-- TAB: MOVIMIENTOS -->
+      <div id="inv-panel-movs" class="resumen-body" style="display:none">
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+          <select id="inv-filtro-tipo" onchange="filtrarMovs()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg)">
+            <option value="">Todos</option>
+            <option value="entrada">Entradas</option>
+            <option value="salida">Salidas</option>
+          </select>
+          <input type="date" id="inv-filtro-desde" onchange="filtrarMovs()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg)"/>
+          <input type="date" id="inv-filtro-hasta" onchange="filtrarMovs()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg)"/>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th style="text-align:left">Fecha</th>
+              <th style="text-align:left">Tipo</th>
+              <th style="text-align:left">Producto</th>
+              <th>Cantidad</th>
+              <th>Costo</th>
+              <th style="text-align:left">Nota</th>
+              <th style="text-align:left">Usuario</th>
+            </tr></thead>
+            <tbody id="inv-tbody-movs"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <script>
 const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbykcDiW-bCujg7gXUJciqLw_YkEADDF6QGLpV1PX3ZgeiPI9YGBHbqROIGoqzytNXU/exec";
+const INV_URL     = "https://script.google.com/macros/s/AKfycbxk6QEYxtoVeLMSn_H5FhbD4Pc-vgjeMBs8vK7L7yK0fhMnINBQOWzPee-BoCLzIoZEWQ/exec";
 const GOOGLE_CLIENT_ID = "280797416294-m1q3nggftt0cpa06ljilpmmcu6gv967g.apps.googleusercontent.com";
 
 let ventasRows = [], gastosRows = [];
@@ -670,6 +793,8 @@ function fmtPeriodo(desde, hasta) {
     if (btnGastos)   btnGastos.style.display   = esCaja  ? 'none' : 'flex';
     if (btnAnalisis) btnAnalisis.style.display = esAdmin ? 'flex' : 'none';
     if (btnAdmin)    btnAdmin.style.display    = esAdmin ? 'flex' : 'none';
+    const btnInv = document.getElementById('mbtn-inv');
+    if (btnInv) btnInv.style.display = esCaja ? 'none' : 'flex';
 
     // Ventas — ocultar resumen de tabs para Caja
     const resumenV = document.getElementById('resumen-v');
@@ -697,6 +822,7 @@ function irA(screenId) {
   if (screenId==='ventas-screen')   iniciarVentas();
   if (screenId==='gastos-screen')   iniciarGastos();
   if (screenId==='admin-screen')    iniciarAdmin();
+  if (screenId==='inv-screen')      iniciarInventario();
   if (screenId==='analisis-screen') iniciarAnalisis();
   if (screenId==='menu-screen') {
     const hoy=new Date();
@@ -1457,6 +1583,275 @@ async function guardarUsuario() {
   } catch(e) {
     st.textContent = 'Error de conexión.'; st.className = 'status error';
   }
+}
+
+// ══════════════════ INVENTARIO ══════════════════════════════
+let invInsumos   = [];
+let invMovs      = [];
+let invTabActual = 'stock';
+
+async function iniciarInventario() {
+  const hoy = new Date();
+  const el = document.getElementById('inv-header-fecha');
+  if (el) el.textContent = hoy.toLocaleDateString('es-MX',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  // Fecha por defecto en entradas/salidas
+  const iso = dateToIso(hoy);
+  ['inv-e-fecha','inv-s-fecha'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = iso;
+  });
+  setInvTab('stock');
+  await cargarInventario();
+}
+
+function setInvTab(tab) {
+  invTabActual = tab;
+  ['stock','entrada','salida','movs'].forEach(t => {
+    const btn = document.getElementById('inv-tab-' + t);
+    const panel = document.getElementById('inv-panel-' + t);
+    if (btn) btn.classList.toggle('active', t === tab);
+    if (panel) panel.style.display = t === tab ? 'block' : 'none';
+  });
+  if (tab === 'movs') renderMovs();
+}
+
+async function cargarInventario() {
+  try {
+    // Cargar insumos y movimientos en paralelo
+    const [rI, rM] = await Promise.all([
+      fetch(INV_URL + '?action=getInsumos'),
+      fetch(INV_URL + '?action=getMovimientos')
+    ]);
+    invInsumos = await rI.json();
+    invMovs    = await rM.json();
+    if (invInsumos.error) { console.warn('Insumos:', invInsumos.error); invInsumos = []; }
+    if (invMovs.error)    { console.warn('Movs:', invMovs.error); invMovs = []; }
+    poblarSelects();
+    poblarFiltroGrupos();
+    renderStock();
+  } catch(e) {
+    console.error('Error cargando inventario:', e.message);
+  }
+}
+
+function poblarSelects() {
+  ['inv-e-producto','inv-s-producto'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const val = sel.value;
+    sel.innerHTML = '<option value="">Selecciona producto...</option>';
+    invInsumos
+      .sort((a,b) => a.nombre.localeCompare(b.nombre))
+      .forEach(ins => {
+        const opt = document.createElement('option');
+        opt.value = ins.nombre;
+        opt.textContent = ins.nombre + ' (' + ins.unidad + ')';
+        sel.appendChild(opt);
+      });
+    sel.value = val;
+  });
+}
+
+function poblarFiltroGrupos() {
+  const sel = document.getElementById('inv-filtro-grupo');
+  if (!sel) return;
+  const grupos = [...new Set(invInsumos.map(i => i.grupo).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Todos los grupos</option>';
+  grupos.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g; opt.textContent = g;
+    sel.appendChild(opt);
+  });
+}
+
+function filtrarStock() {
+  renderStock();
+}
+
+function renderStock() {
+  const buscar = (document.getElementById('inv-buscar')?.value || '').toLowerCase();
+  const grupo  = document.getElementById('inv-filtro-grupo')?.value || '';
+  const tbody  = document.getElementById('inv-tbody-stock');
+  if (!tbody) return;
+
+  const filtrados = invInsumos.filter(i => {
+    const matchNombre = !buscar || i.nombre.toLowerCase().includes(buscar);
+    const matchGrupo  = !grupo  || i.grupo === grupo;
+    return matchNombre && matchGrupo;
+  });
+
+  // Métricas
+  const valorTotal = invInsumos.reduce((a,i) => a + (i.stock * i.precio), 0);
+  const stockBajo  = invInsumos.filter(i => i.stock > 0 && i.stock <= 2).length;
+  const sinStock   = invInsumos.filter(i => i.stock <= 0).length;
+
+  document.getElementById('inv-total-prod').textContent  = invInsumos.length;
+  document.getElementById('inv-valor-total').textContent = fmt(valorTotal);
+  document.getElementById('inv-stock-bajo').textContent  = stockBajo;
+  document.getElementById('inv-sin-stock').textContent   = sinStock;
+
+  if (!filtrados.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--muted)">Sin resultados</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  filtrados
+    .sort((a,b) => a.nombre.localeCompare(b.nombre))
+    .forEach(i => {
+      const valor = i.stock * i.precio;
+      const stockOk = i.stock > 2 ? 'var(--accent)' : i.stock > 0 ? 'orange' : 'var(--danger)';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${i.nombre}</td>
+        <td style="color:var(--muted);font-size:12px">${i.grupo}</td>
+        <td style="text-align:center">${i.unidad}</td>
+        <td style="text-align:center;font-weight:500;color:${stockOk}">${i.stock}</td>
+        <td style="text-align:center;color:var(--muted)">${i.stockEnPiezas||0}</td>
+        <td style="text-align:right">${fmt(i.precio)}</td>
+        <td style="text-align:right;font-weight:500">${fmt(valor)}</td>`;
+      tbody.appendChild(tr);
+    });
+}
+
+async function registrarMovimiento(tipo) {
+  const statusId = tipo === 'entrada' ? 'inv-e-status' : 'inv-s-status';
+  const st = document.getElementById(statusId);
+  st.textContent = ''; st.className = 'status';
+
+  const fecha    = document.getElementById('inv-' + tipo[0] + '-fecha').value;
+  const producto = document.getElementById('inv-' + tipo[0] + '-producto').value;
+  const cantidad = parseFloat(document.getElementById('inv-' + tipo[0] + '-cantidad').value) || 0;
+  const nota     = document.getElementById('inv-' + tipo[0] + '-nota').value.trim();
+
+  if (!fecha)    { st.textContent='Ingresa una fecha.';    st.className='status error'; return; }
+  if (!producto) { st.textContent='Selecciona un producto.'; st.className='status error'; return; }
+  if (!cantidad) { st.textContent='Ingresa una cantidad.'; st.className='status error'; return; }
+
+  const insumo = invInsumos.find(i => i.nombre === producto);
+  if (!insumo) { st.textContent='Producto no encontrado.'; st.className='status error'; return; }
+
+  // Verificar stock suficiente para salidas
+  if (tipo === 'salida' && insumo.stock < cantidad) {
+    st.textContent = '⚠️ Stock insuficiente. Disponible: ' + insumo.stock + ' ' + insumo.unidad;
+    st.className = 'status error'; return;
+  }
+
+  const costo = tipo === 'entrada'
+    ? (parseFloat(document.getElementById('inv-e-costo').value) || null)
+    : null;
+  const motivo = tipo === 'salida'
+    ? document.getElementById('inv-s-motivo').value
+    : '';
+
+  st.textContent = 'Guardando...';
+
+  try {
+    const now  = new Date();
+    const hora = now.toTimeString().slice(0,5);
+    const mov  = {
+      id:           tipo[0].toUpperCase() + now.getTime(),
+      tipo:         tipo,
+      fecha:        fecha,
+      hora:         hora,
+      timestamp:    now.toISOString(),
+      usuario:      usuarioActual ? usuarioActual.usuario : '',
+      rol:          usuarioActual ? usuarioActual.perfil  : '',
+      insumoNombre: producto,
+      unidad:       insumo.unidad,
+      cantidad:     cantidad,
+      costo:        costo,
+      nota:         motivo ? motivo + (nota ? ': ' + nota : '') : nota
+    };
+
+    const res  = await fetch(INV_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'addMovimiento', data: mov })
+    });
+    const data = await res.json();
+
+    if (data.ok || data.error === undefined) {
+      // Actualizar stock localmente
+      const idx = invInsumos.findIndex(i => i.nombre === producto);
+      if (idx >= 0) {
+        if (tipo === 'entrada') invInsumos[idx].stock += cantidad;
+        else                    invInsumos[idx].stock -= cantidad;
+        if (invInsumos[idx].stock < 0) invInsumos[idx].stock = 0;
+        // Recalcular stockEnPiezas
+        const ppu = invInsumos[idx].piezasPorUnidad || 1;
+        invInsumos[idx].stockEnPiezas = Math.round(invInsumos[idx].stock * ppu);
+      }
+
+      // Guardar insumos actualizados
+      await fetch(INV_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'saveInsumos', data: invInsumos })
+      });
+
+      st.textContent = tipo === 'entrada' ? '✅ Entrada registrada.' : '✅ Salida registrada.';
+      st.className = 'status';
+
+      // Limpiar campos
+      document.getElementById('inv-' + tipo[0] + '-cantidad').value = '';
+      document.getElementById('inv-' + tipo[0] + '-nota').value = '';
+      if (tipo === 'entrada') document.getElementById('inv-e-costo').value = '';
+      document.getElementById('inv-' + tipo[0] + '-producto').value = '';
+
+      // Refrescar stock
+      renderStock();
+      invMovs.unshift(mov);
+
+    } else {
+      st.textContent = '⚠️ Error: ' + data.error;
+      st.className = 'status error';
+    }
+  } catch(e) {
+    st.textContent = '⚠️ Error de conexión.'; st.className = 'status error';
+  }
+}
+
+function filtrarMovs() {
+  renderMovs();
+}
+
+function renderMovs() {
+  const tipo  = document.getElementById('inv-filtro-tipo')?.value || '';
+  const desde = document.getElementById('inv-filtro-desde')?.value || '';
+  const hasta = document.getElementById('inv-filtro-hasta')?.value || '';
+  const tbody = document.getElementById('inv-tbody-movs');
+  if (!tbody) return;
+
+  let filtrados = [...invMovs];
+  if (tipo)  filtrados = filtrados.filter(m => m.tipo === tipo);
+  if (desde) filtrados = filtrados.filter(m => String(m.fecha) >= desde);
+  if (hasta) filtrados = filtrados.filter(m => String(m.fecha) <= hasta);
+
+  // Ordenar por fecha descendente
+  filtrados.sort((a,b) => String(b.fecha+b.hora).localeCompare(String(a.fecha+a.hora)));
+  filtrados = filtrados.slice(0, 50); // últimos 50
+
+  if (!filtrados.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--muted)">Sin movimientos</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  filtrados.forEach(m => {
+    const color = m.tipo === 'entrada' ? 'var(--accent)' : 'var(--danger)';
+    const icon  = m.tipo === 'entrada' ? '📥' : '📤';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${labelFecha(String(m.fecha).substring(0,10))}</td>
+      <td><span style="color:${color};font-size:13px">${icon} ${m.tipo}</span></td>
+      <td>${m.insumoNombre}</td>
+      <td style="text-align:center;font-weight:500">${m.cantidad} ${m.unidad}</td>
+      <td style="text-align:right">${m.costo ? fmt(m.costo) : '—'}</td>
+      <td style="color:var(--muted);font-size:12px">${m.nota||'—'}</td>
+      <td style="color:var(--muted);font-size:12px">${m.usuario||'—'}</td>`;
+    tbody.appendChild(tr);
+  });
 }
 
 // ── Init ─────────────────────────────────────────────────────
