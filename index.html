@@ -851,8 +851,9 @@ function fmtPeriodo(desde, hasta) {
     if (btnGastos)   btnGastos.style.display   = esCaja  ? 'none' : 'flex';
     if (btnAnalisis) btnAnalisis.style.display = esAdmin ? 'flex' : 'none';
     if (btnAdmin)    btnAdmin.style.display    = esAdmin ? 'flex' : 'none';
+    const esCocina = perfil === 'cocina';
     const btnInv = document.getElementById('mbtn-inv');
-    if (btnInv) btnInv.style.display = esCaja ? 'none' : 'flex';
+    if (btnInv) btnInv.style.display = 'flex'; // todos ven inventario
 
     // Ventas — ocultar resumen de tabs para Caja
     const resumenV = document.getElementById('resumen-v');
@@ -1720,9 +1721,33 @@ function setInvTab(tab) {
   if (tab === 'inventario') invRenderStock();
   if (tab === 'historial')  invRenderHistorial();
   if (tab === 'gestion')    invRenderGestion();
-  // Ocultar gestión para no-Admin
+  // Permisos de tabs según perfil
+  const _perfil = (usuarioActual ? usuarioActual.perfil : '').toLowerCase();
+  const _esCaja   = _perfil === 'caja';
+  const _esCocina = _perfil === 'cocina';
+
+  // Gestión solo Admin
   const btnG = document.getElementById('inv-tab-gestion');
-  if (btnG) btnG.style.display = (usuarioActual && usuarioActual.perfil.toLowerCase()==='admin') ? 'inline-flex' : 'none';
+  if (btnG) btnG.style.display = (_perfil === 'admin') ? 'inline-flex' : 'none';
+
+  // Caja y Cocina: manejar botones de tipo en registro
+  const btnEntrada = document.getElementById('inv-btn-entrada');
+  const btnUso     = document.getElementById('inv-btn-uso');
+  const typeRow    = document.getElementById('inv-type-row');
+  if (tab === 'registrar') {
+    if (_esCaja) {
+      // Caja: solo uso, ocultar botón entrada
+      if (btnEntrada) btnEntrada.style.display = 'none';
+      setInvTipo('uso');
+    } else if (_esCocina) {
+      // Cocina: ambos visibles, entrada por defecto
+      if (btnEntrada) btnEntrada.style.display = 'flex';
+      if (btnUso)     btnUso.style.display     = 'flex';
+    } else {
+      if (btnEntrada) btnEntrada.style.display = 'flex';
+      if (btnUso)     btnUso.style.display     = 'flex';
+    }
+  }
 }
 
 // ── Registro ──────────────────────────────────────────────────
@@ -1752,11 +1777,20 @@ function invFiltrarInsumos() {
   const lista = document.getElementById('inv-f-lista');
   if (!q) { lista.style.display = 'none'; return; }
 
-  const base = invTipoActual === 'entrada' ? invInsumos : invInsumos.filter(i => {
-    const cat = i.categoria || 'ambos';
-    const rol = (usuarioActual?.perfil||'').toLowerCase();
-    if (rol === 'caja' && cat === 'cocina') return false;
-    return true;
+  const _rolF = (usuarioActual?.perfil||'').toLowerCase();
+  // Para entrada: Caja no puede, Cocina y Admin/Super sí
+  // Para uso: Caja solo venta/ambos, Cocina solo cocina/ambos
+  const base = invInsumos.filter(i => {
+    const cat = (i.categoria || 'ambos').toLowerCase();
+    if (invTipoActual === 'entrada') {
+      if (_rolF === 'caja') return false; // Caja no registra entradas
+      return true;
+    } else {
+      // uso
+      if (_rolF === 'caja'   && cat === 'cocina') return false; // Caja no usa cocina
+      if (_rolF === 'cocina' && cat === 'venta')  return false; // Cocina no usa venta
+      return true;
+    }
   });
   const filtrados = base.filter(i => i.nombre.toLowerCase().includes(q));
 
@@ -1871,6 +1905,10 @@ async function invDoRegistrar() {
   const nota = (document.getElementById('inv-f-nota').value||'').trim();
 
   st.textContent=''; st.className='status';
+  const _pReg = (usuarioActual ? usuarioActual.perfil : '').toLowerCase();
+  if (_pReg === 'caja' && invTipoActual === 'entrada') {
+    st.textContent = '⛔ Sin permiso para registrar entradas.'; st.className='status error'; return;
+  }
   if (!ins)  { st.textContent='Selecciona un insumo.'; st.className='status error'; return; }
   if (!cant) { st.textContent='Ingresa la cantidad.';  st.className='status error'; return; }
 
@@ -1998,10 +2036,16 @@ function invRenderStock() {
   const div    = document.getElementById('inv-lista-stock');
   if (!div) return;
 
-  const esAdmin = usuarioActual && usuarioActual.perfil.toLowerCase() === 'admin';
+  const _pStock   = (usuarioActual ? usuarioActual.perfil : '').toLowerCase();
+  const esAdmin   = _pStock === 'admin' || _pStock === 'super';
+  const _esCajaS  = _pStock === 'caja';
+  const _esCocinaS= _pStock === 'cocina';
   const lista   = invInsumos.filter(i => {
     if (buscar && !i.nombre.toLowerCase().includes(buscar)) return false;
     if (grupo && (i.grupo||'Otros') !== grupo) return false;
+    // Caja solo ve venta/ambos
+    const cat = (i.categoria||'ambos').toLowerCase();
+    if (_esCajaS && cat === 'cocina') return false;
     return true;
   });
 
@@ -2035,7 +2079,7 @@ function invRenderStock() {
           ${ppu>0&&si.cajas>0?`<div style="font-size:13px;color:var(--accent);font-weight:600">📦 ${si.cajas} ${i.unidad}${si.cajas>1?'s':''}</div>`:''}
           ${ppu>0&&si.piezasSueltas>0?`<div style="font-size:13px;color:orange;font-weight:600">🔹 ${si.piezasSueltas} pieza${si.piezasSueltas>1?'s':''} suelta${si.piezasSueltas>1?'s':''}</div>`:''}
           ${ppu>0?`<div style="font-size:11px;color:var(--muted)">${si.totalPiezas} pzas total</div>`:''}
-          ${esAdmin&&i.precio?`<div style="font-size:12px;color:var(--muted)">Precio: ${fmtM(i.precio)}/${i.unidad}</div>`:''}
+          ${esAdmin?`<div style="font-size:12px;color:var(--muted)">Precio: ${fmtM(i.precio)}/${i.unidad}</div>`:''}
           ${esAdmin&&i.precio&&i.stock?`<div style="font-size:12px;font-weight:600;color:var(--accent)">Valor: ${fmtM(i.precio*i.stock)}</div>`:''}
         </div>
         <div style="text-align:right;flex-shrink:0">
@@ -2060,7 +2104,10 @@ function invRenderHistorial() {
   const hasta   = document.getElementById('inv-h-hasta')?.value||'';
   const div     = document.getElementById('inv-h-lista');
   const resDiv  = document.getElementById('inv-h-resumen');
-  const esAdmin = usuarioActual && usuarioActual.perfil.toLowerCase() === 'admin';
+  const _pStock   = (usuarioActual ? usuarioActual.perfil : '').toLowerCase();
+  const esAdmin   = _pStock === 'admin' || _pStock === 'super';
+  const _esCajaS  = _pStock === 'caja';
+  const _esCocinaS= _pStock === 'cocina';
   if (!div) return;
 
   let lista = invMovs.filter(m => {
@@ -2082,6 +2129,13 @@ function invRenderHistorial() {
       ${esAdmin&&costo>0?`<div class="rmetric"><div class="rl">Costo</div><div class="rv" style="color:var(--accent)">${fmtM(costo)}</div></div>`:''}`;
     resDiv.style.display = 'grid';
   } else if (resDiv) { resDiv.style.display='none'; }
+
+  // Ocultar Excel para Caja y Cocina
+  const _btnXls = document.querySelector('[onclick="invExportarExcel()"]');
+  if (_btnXls) {
+    const _pXls = (usuarioActual ? usuarioActual.perfil : '').toLowerCase();
+    _btnXls.style.display = (_pXls === 'admin' || _pXls === 'super') ? 'inline-block' : 'none';
+  }
 
   if (!lista.length) { div.innerHTML='<div style="text-align:center;padding:2rem;color:var(--muted)">Sin movimientos</div>'; return; }
 
