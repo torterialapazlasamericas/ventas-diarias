@@ -599,116 +599,171 @@ tbody tr{animation:fadeIn .2s ease;}
   <div class="mod-header">
     <button class="nav-back" onclick="irA('menu-screen')">← Menú</button>
     <h1>Inventario</h1>
-    <span id="inv-header-fecha"></span>
+    <span id="inv-fecha-hdr" style="font-size:13px;color:var(--muted)"></span>
   </div>
-  <div style="max-width:980px;margin:0 auto;padding:1.5rem">
+  <div style="max-width:980px;margin:0 auto;padding:1.25rem 1rem">
 
-    <!-- TABS PRINCIPALES -->
+    <!-- TABS -->
     <div class="resumen-card" style="margin-bottom:1.25rem">
-      <div class="tabs">
-        <button class="tab active" id="inv-tab-stock"   onclick="setInvTab('stock')">📋 Stock actual</button>
-        <button class="tab"        id="inv-tab-entrada" onclick="setInvTab('entrada')">📥 Entrada</button>
-        <button class="tab"        id="inv-tab-salida"  onclick="setInvTab('salida')">📤 Salida</button>
-        <button class="tab"        id="inv-tab-movs"    onclick="setInvTab('movs')">📊 Movimientos</button>
+      <div class="tabs" id="inv-tabs">
+        <button class="tab active" id="inv-tab-registrar"  onclick="setInvTab('registrar')">📝 Registrar</button>
+        <button class="tab"        id="inv-tab-inventario" onclick="setInvTab('inventario')">📦 Stock</button>
+        <button class="tab"        id="inv-tab-historial"  onclick="setInvTab('historial')">📊 Historial</button>
+        <button class="tab"        id="inv-tab-gestion"    onclick="setInvTab('gestion')">⚙️ Gestión</button>
       </div>
 
-      <!-- TAB: STOCK ACTUAL -->
-      <div id="inv-panel-stock" class="resumen-body">
+      <!-- REGISTRAR -->
+      <div id="inv-panel-registrar" class="resumen-body">
+        <!-- Tipo de movimiento -->
+        <div id="inv-type-row" style="display:flex;gap:8px;margin-bottom:14px">
+          <button id="inv-btn-entrada" onclick="setInvTipo('entrada')"
+            style="flex:1;padding:11px 0;border-radius:10px;border:2px solid var(--accent);background:var(--accent-bg);color:var(--accent);font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif">
+            📥 Entrada a bodega
+          </button>
+          <button id="inv-btn-uso" onclick="setInvTipo('uso')"
+            style="flex:1;padding:11px 0;border-radius:10px;border:2px solid var(--border);background:transparent;color:var(--muted);font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif">
+            📤 Uso en cocina
+          </button>
+        </div>
+
+        <div style="max-width:440px">
+          <!-- Buscador de insumo -->
+          <div class="field">
+            <label>Insumo</label>
+            <input type="text" id="inv-f-buscar" placeholder="🔍 Buscar insumo..." oninput="invFiltrarInsumos()" autocomplete="off"/>
+            <div id="inv-f-lista" style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-top:-8px;display:none;background:var(--surface)"></div>
+          </div>
+          <!-- Insumo seleccionado -->
+          <div id="inv-f-sel" style="display:none;align-items:center;justify-content:space-between;background:var(--accent-bg);border:1px solid var(--accent);border-radius:8px;padding:10px 12px;margin-bottom:12px;cursor:pointer" onclick="invLimpiarInsumo()">
+            <span id="inv-f-sel-txt" style="font-weight:600;color:var(--accent)"></span>
+            <span style="color:var(--muted);font-size:12px">✕ cambiar</span>
+          </div>
+          <!-- Stock badge -->
+          <div id="inv-stock-badge" style="display:none;padding:6px 12px;border-radius:20px;font-size:13px;font-weight:600;margin-bottom:12px"></div>
+          <!-- Toggle pieza/unidad (solo en uso si tiene ppu) -->
+          <div id="inv-uso-toggle" style="display:none;gap:8px;margin-bottom:12px">
+            <button id="inv-btn-pieza"  onclick="setInvUsoTipo('pieza')"
+              style="flex:1;padding:9px 0;border-radius:10px;border:2px solid var(--accent);background:var(--accent-bg);color:var(--accent);font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif">
+              🔹 Por pieza
+            </button>
+            <button id="inv-btn-unidad" onclick="setInvUsoTipo('unidad')"
+              style="flex:1;padding:9px 0;border-radius:10px;border:2px solid var(--border);background:transparent;color:var(--muted);font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif">
+              📦 Caja/Paquete
+            </button>
+          </div>
+          <div id="inv-uso-info" style="display:none;font-size:12px;color:var(--accent);margin-bottom:10px;padding:8px 12px;background:var(--accent-bg);border-radius:8px"></div>
+
+          <div class="field">
+            <label id="inv-cant-label">Cantidad</label>
+            <input type="text" inputmode="decimal" id="inv-f-cant" placeholder="0" autocomplete="off" oninput="invOnCantChange()"/>
+            <div id="inv-cant-equiv" style="display:none;font-size:12px;color:var(--muted);margin-top:4px;padding:6px 10px;background:var(--bg);border-radius:6px"></div>
+          </div>
+          <div id="inv-costo-section" class="field">
+            <label>Precio por unidad (opcional)</label>
+            <input type="text" inputmode="decimal" id="inv-f-costo" placeholder="0.00" autocomplete="off"/>
+          </div>
+          <div class="field">
+            <label>Nota / Proveedor (opcional)</label>
+            <input type="text" id="inv-f-nota" placeholder="Ej: SAMS CLUB" autocomplete="off"/>
+          </div>
+          <button class="btn-primary" id="inv-btn-registrar" onclick="invDoRegistrar()">📥 Registrar entrada</button>
+          <div class="status" id="inv-status"></div>
+        </div>
+
+        <!-- Últimos movimientos -->
+        <div id="inv-ultimos" style="margin-top:1.25rem"></div>
+      </div>
+
+      <!-- STOCK ACTUAL -->
+      <div id="inv-panel-inventario" class="resumen-body" style="display:none">
         <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-          <input type="text" id="inv-buscar" placeholder="Buscar producto..." style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg);outline:none" oninput="filtrarStock()"/>
-          <select id="inv-filtro-grupo" onchange="filtrarStock()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg)">
+          <input type="text" id="inv-buscar-stock" placeholder="Buscar..." oninput="invRenderStock()"
+            style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg);outline:none;min-width:120px"/>
+          <select id="inv-filtro-grupo" onchange="invRenderStock()"
+            style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg)">
             <option value="">Todos los grupos</option>
           </select>
         </div>
-        <!-- Métricas resumen -->
+        <!-- Métricas -->
         <div class="resumen-grid" style="margin-bottom:12px">
-          <div class="rmetric"><div class="rl">Productos</div><div class="rv" id="inv-total-prod">—</div></div>
-          <div class="rmetric"><div class="rl">Valor total</div><div class="rv green" id="inv-valor-total">—</div></div>
-          <div class="rmetric"><div class="rl">Stock bajo</div><div class="rv" style="color:var(--danger)" id="inv-stock-bajo">—</div></div>
-          <div class="rmetric"><div class="rl">Sin stock</div><div class="rv" style="color:var(--danger)" id="inv-sin-stock">—</div></div>
+          <div class="rmetric"><div class="rl">Productos</div><div class="rv" id="inv-m-total">—</div></div>
+          <div class="rmetric"><div class="rl">Valor total</div><div class="rv green" id="inv-m-valor">—</div></div>
+          <div class="rmetric"><div class="rl">Stock bajo</div><div class="rv" style="color:orange" id="inv-m-bajo">—</div></div>
+          <div class="rmetric"><div class="rl">Sin stock</div><div class="rv" style="color:var(--danger)" id="inv-m-sin">—</div></div>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr>
-              <th style="text-align:left">Producto</th>
-              <th style="text-align:left">Grupo</th>
-              <th>Unidad</th>
-              <th>Stock</th>
-              <th>Piezas</th>
-              <th>Precio</th>
-              <th>Valor</th>
-            </tr></thead>
-            <tbody id="inv-tbody-stock"></tbody>
-          </table>
-        </div>
+        <div id="inv-lista-stock"></div>
       </div>
 
-      <!-- TAB: ENTRADA -->
-      <div id="inv-panel-entrada" class="resumen-body" style="display:none">
-        <div style="max-width:420px">
-          <div class="field"><label>Fecha</label><input type="date" id="inv-e-fecha"/></div>
-          <div class="field"><label>Producto</label>
-            <select id="inv-e-producto" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:15px;background:var(--bg)">
-              <option value="">Selecciona producto...</option>
-            </select>
-          </div>
-          <div class="field"><label>Cantidad</label><input type="text" inputmode="decimal" id="inv-e-cantidad" placeholder="0" autocomplete="off"/></div>
-          <div class="field"><label>Costo unitario (opcional)</label><input type="text" inputmode="decimal" id="inv-e-costo" placeholder="0" autocomplete="off"/></div>
-          <div class="field"><label>Nota</label><input type="text" id="inv-e-nota" placeholder="Opcional..." autocomplete="off"/></div>
-          <button class="btn-primary" onclick="registrarMovimiento('entrada')">Registrar entrada</button>
-          <div class="status" id="inv-e-status"></div>
-        </div>
-      </div>
-
-      <!-- TAB: SALIDA -->
-      <div id="inv-panel-salida" class="resumen-body" style="display:none">
-        <div style="max-width:420px">
-          <div class="field"><label>Fecha</label><input type="date" id="inv-s-fecha"/></div>
-          <div class="field"><label>Producto</label>
-            <select id="inv-s-producto" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:15px;background:var(--bg)">
-              <option value="">Selecciona producto...</option>
-            </select>
-          </div>
-          <div class="field"><label>Cantidad</label><input type="text" inputmode="decimal" id="inv-s-cantidad" placeholder="0" autocomplete="off"/></div>
-          <div class="field"><label>Motivo</label>
-            <select id="inv-s-motivo" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:15px;background:var(--bg)">
-              <option value="uso">Uso en cocina</option>
-              <option value="venta">Venta</option>
-              <option value="merma">Merma</option>
-              <option value="otro">Otro</option>
-            </select>
-          </div>
-          <div class="field"><label>Nota</label><input type="text" id="inv-s-nota" placeholder="Opcional..." autocomplete="off"/></div>
-          <button class="btn-primary" onclick="registrarMovimiento('salida')">Registrar salida</button>
-          <div class="status" id="inv-s-status"></div>
-        </div>
-      </div>
-
-      <!-- TAB: MOVIMIENTOS -->
-      <div id="inv-panel-movs" class="resumen-body" style="display:none">
+      <!-- HISTORIAL -->
+      <div id="inv-panel-historial" class="resumen-body" style="display:none">
         <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-          <select id="inv-filtro-tipo" onchange="filtrarMovs()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg)">
-            <option value="">Todos</option>
-            <option value="entrada">Entradas</option>
-            <option value="salida">Salidas</option>
+          <select id="inv-h-insumo" onchange="invRenderHistorial()"
+            style="flex:2;min-width:120px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg)">
+            <option value="">Todos los insumos</option>
           </select>
-          <input type="date" id="inv-filtro-desde" onchange="filtrarMovs()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg)"/>
-          <input type="date" id="inv-filtro-hasta" onchange="filtrarMovs()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg)"/>
+          <select id="inv-h-tipo" onchange="invRenderHistorial()"
+            style="flex:1;min-width:100px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg)">
+            <option value="">Todos</option>
+            <option value="entrada">📥 Entradas</option>
+            <option value="uso">📤 Usos</option>
+          </select>
+          <input type="date" id="inv-h-desde" onchange="invRenderHistorial()"
+            style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg)"/>
+          <input type="date" id="inv-h-hasta" onchange="invRenderHistorial()"
+            style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg)"/>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr>
-              <th style="text-align:left">Fecha</th>
-              <th style="text-align:left">Tipo</th>
-              <th style="text-align:left">Producto</th>
-              <th>Cantidad</th>
-              <th>Costo</th>
-              <th style="text-align:left">Nota</th>
-              <th style="text-align:left">Usuario</th>
-            </tr></thead>
-            <tbody id="inv-tbody-movs"></tbody>
-          </table>
+        <!-- Resumen historial -->
+        <div id="inv-h-resumen" style="display:none" class="resumen-grid" style="margin-bottom:12px"></div>
+        <div id="inv-h-lista"></div>
+      </div>
+
+      <!-- GESTIÓN (solo Admin) -->
+      <div id="inv-panel-gestion" class="resumen-body" style="display:none">
+        <!-- Agregar nuevo insumo -->
+        <div style="margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border)">
+          <h3 style="font-family:'DM Serif Display',serif;font-size:16px;font-weight:400;margin-bottom:1rem">Agregar nuevo insumo</h3>
+          <div style="max-width:440px">
+            <div class="field"><label>Nombre</label><input type="text" id="inv-n-nombre" placeholder="Ej: Tomate" autocomplete="off"/></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div class="field">
+                <label>Unidad</label>
+                <select id="inv-n-unidad" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg)">
+                  <option value="kg">Kilogramos (kg)</option>
+                  <option value="g">Gramos (g)</option>
+                  <option value="pieza">Pieza</option>
+                  <option value="caja">Caja</option>
+                  <option value="paquete">Paquete</option>
+                  <option value="lt">Litros (lt)</option>
+                </select>
+              </div>
+              <div class="field"><label>Stock inicial</label><input type="text" inputmode="decimal" id="inv-n-stock" placeholder="0" autocomplete="off"/></div>
+            </div>
+            <div class="field"><label>Precio unitario ($)</label><input type="text" inputmode="decimal" id="inv-n-precio" placeholder="0.00" autocomplete="off"/></div>
+            <div class="field">
+              <label>Área de uso</label>
+              <select id="inv-n-categoria" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg)">
+                <option value="ambos">🔀 Ambos</option>
+                <option value="cocina">👨‍🍳 Solo Cocina</option>
+                <option value="venta">🛒 Solo Venta</option>
+              </select>
+            </div>
+            <div class="field"><label>Grupo</label><input type="text" id="inv-n-grupo" placeholder="Ej: Carnes, Bebidas..." autocomplete="off" list="inv-grupos-list"/><datalist id="inv-grupos-list"></datalist></div>
+            <div class="field"><label>Piezas por unidad <span style="color:var(--muted);font-weight:400;text-transform:none">(0 si no aplica)</span></label><input type="text" inputmode="numeric" id="inv-n-piezas" placeholder="0" autocomplete="off"/></div>
+            <button class="btn-primary" onclick="invAgregarInsumo()">+ Agregar insumo</button>
+            <div class="status" id="inv-gestion-status"></div>
+          </div>
         </div>
+        <!-- Lista de insumos para editar/eliminar -->
+        <h3 style="font-family:'DM Serif Display',serif;font-size:16px;font-weight:400;margin-bottom:1rem">Gestionar insumos</h3>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input type="text" id="inv-g-buscar" placeholder="Buscar..." oninput="invRenderGestion()"
+            style="flex:2;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg);outline:none"/>
+          <select id="inv-g-grupo" onchange="invRenderGestion()"
+            style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg)">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div id="inv-g-lista"></div>
       </div>
     </div>
   </div>
