@@ -607,7 +607,7 @@ tbody tr{animation:fadeIn .2s ease;}
     <div class="resumen-card" style="margin-bottom:1.25rem">
       <div class="tabs" id="inv-tabs">
         <button class="tab active" id="inv-tab-registrar"  onclick="setInvTab('registrar')">📝 Registrar</button>
-        <button class="tab"        id="inv-tab-inventario" onclick="setInvTab('inventario')">📦 Stock</button>
+        <button class="tab"        id="inv-tab-inventario" onclick="setInvTab('inventario')">📦 Inventario</button>
         <button class="tab"        id="inv-tab-historial"  onclick="setInvTab('historial')">📊 Historial</button>
         <button class="tab"        id="inv-tab-gestion"    onclick="setInvTab('gestion')">⚙️ Gestión</button>
       </div>
@@ -713,7 +713,10 @@ tbody tr{animation:fadeIn .2s ease;}
             style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg)"/>
         </div>
         <!-- Resumen historial -->
-        <div id="inv-h-resumen" style="display:none" class="resumen-grid" style="margin-bottom:12px"></div>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+          <button class="btn-corregir" style="color:var(--accent);border-color:var(--accent)" onclick="invExportarExcel()">⬇ Exportar Excel</button>
+        </div>
+        <div id="inv-h-resumen"  style="display:none" class="resumen-grid" style="margin-bottom:12px"></div>
         <div id="inv-h-lista"></div>
       </div>
 
@@ -772,7 +775,7 @@ tbody tr{animation:fadeIn .2s ease;}
 
 <script>
 const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbykcDiW-bCujg7gXUJciqLw_YkEADDF6QGLpV1PX3ZgeiPI9YGBHbqROIGoqzytNXU/exec";
-const INV_URL     = "https://script.google.com/macros/s/AKfycbxk6QEYxtoVeLMSn_H5FhbD4Pc-vgjeMBs8vK7L7yK0fhMnINBQOWzPee-BoCLzIoZEWQ/exec";
+const INV_URL     = "https://script.google.com/macros/s/AKfycbwF3sHrXuDW3tpdi7VT6cx0vrJGN3VG5X7mrpcvLQ5SLv3BPxKwECv4u3BYYBySF64f/exec";
 const GOOGLE_CLIENT_ID = "280797416294-m1q3nggftt0cpa06ljilpmmcu6gv967g.apps.googleusercontent.com";
 
 let ventasRows = [], gastosRows = [];
@@ -1643,270 +1646,619 @@ async function guardarUsuario() {
 // ══════════════════ INVENTARIO ══════════════════════════════
 let invInsumos   = [];
 let invMovs      = [];
-let invTabActual = 'stock';
+let invTipoActual = 'entrada';
+let invUsoTipo    = 'unidad';
+let invSelId      = null;
+let invDelConfirm = null;
 
-async function iniciarInventario() {
-  const hoy = new Date();
-  const el = document.getElementById('inv-header-fecha');
-  if (el) el.textContent = hoy.toLocaleDateString('es-MX',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  // Fecha por defecto en entradas/salidas
-  const iso = dateToIso(hoy);
-  ['inv-e-fecha','inv-s-fecha'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = iso;
-  });
-  setInvTab('stock');
-  await cargarInventario();
+function toNum(v) {
+  if (v===null||v===undefined||v==='') return 0;
+  const n = parseFloat(String(v).replace(/[$,\s]/g,''));
+  return isNaN(n) ? 0 : n;
+}
+function toInt(v) { return Math.round(toNum(v)); }
+function fmtM(n)  { return '$' + Number(n).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function invStockInfo(ins) {
+  if (!ins) return {cajas:0,piezasSueltas:0,totalPiezas:0,texto:'0'};
+  const ppu   = toInt(ins.piezasPorUnidad);
+  const stock = toNum(ins.stock);
+  if (ppu > 0) {
+    const cajas   = Math.floor(stock);
+    const frac    = stock - cajas;
+    const sueltas = Math.round(frac * ppu);
+    const total   = ins.stockEnPiezas > 0 ? Math.round(ins.stockEnPiezas) : Math.round(stock * ppu);
+    let txt = '';
+    if (cajas > 0)   txt += cajas + ' ' + ins.unidad + (cajas>1?'s':'');
+    if (sueltas > 0) txt += (txt?' + ':'') + sueltas + ' pieza' + (sueltas>1?'s':'') + ' suelta' + (sueltas>1?'s':'');
+    if (!txt)        txt = '0 ' + ins.unidad + 's';
+    return {cajas, piezasSueltas:sueltas, totalPiezas:total, texto:txt};
+  }
+  return {cajas:0, piezasSueltas:0, totalPiezas:stock, texto:stock+' '+ins.unidad};
 }
 
-function setInvTab(tab) {
-  invTabActual = tab;
-  ['stock','entrada','salida','movs'].forEach(t => {
-    const btn = document.getElementById('inv-tab-' + t);
-    const panel = document.getElementById('inv-panel-' + t);
-    if (btn) btn.classList.toggle('active', t === tab);
-    if (panel) panel.style.display = t === tab ? 'block' : 'none';
-  });
-  if (tab === 'movs') renderMovs();
+async function iniciarInventario() {
+  setInvTab('registrar');
+  // Fecha actual en header
+  const el = document.getElementById('inv-fecha-hdr');
+  if (el) el.textContent = new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
+  await cargarInventario();
 }
 
 async function cargarInventario() {
   try {
-    // Cargar insumos y movimientos en paralelo
     const [rI, rM] = await Promise.all([
       fetch(INV_URL + '?action=getInsumos'),
       fetch(INV_URL + '?action=getMovimientos')
     ]);
-    invInsumos = await rI.json();
-    invMovs    = await rM.json();
-    if (invInsumos.error) { console.warn('Insumos:', invInsumos.error); invInsumos = []; }
-    if (invMovs.error)    { console.warn('Movs:', invMovs.error); invMovs = []; }
-    poblarSelects();
-    poblarFiltroGrupos();
-    renderStock();
+    const rawI = await rI.json();
+    const rawM = await rM.json();
+    invInsumos = (rawI && rawI.length) ? rawI.map(i => {
+      const s   = toNum(i.stock);
+      const ppu = toInt(i.piezasPorUnidad);
+      const spe = toNum(i.stockEnPiezas);
+      return {...i, stock:s, precio:toNum(i.precio),
+        piezasPorUnidad:ppu,
+        stockEnPiezas: spe>0 ? spe : (ppu>0 ? Math.round(s*ppu) : s),
+        grupo: i.grupo||'Otros', categoria: i.categoria||'ambos'};
+    }) : [];
+    invMovs = (rawM && rawM.length) ? [...rawM].reverse() : [];
+    invPoblarFiltros();
+    invRenderUltimos();
   } catch(e) {
-    console.error('Error cargando inventario:', e.message);
+    console.error('Error inventario:', e.message);
   }
 }
 
-function poblarSelects() {
-  ['inv-e-producto','inv-s-producto'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (!sel) return;
-    const val = sel.value;
-    sel.innerHTML = '<option value="">Selecciona producto...</option>';
-    invInsumos
-      .sort((a,b) => a.nombre.localeCompare(b.nombre))
-      .forEach(ins => {
-        const opt = document.createElement('option');
-        opt.value = ins.nombre;
-        opt.textContent = ins.nombre + ' (' + ins.unidad + ')';
-        sel.appendChild(opt);
-      });
-    sel.value = val;
+function setInvTab(tab) {
+  ['registrar','inventario','historial','gestion'].forEach(t => {
+    const btn   = document.getElementById('inv-tab-' + t);
+    const panel = document.getElementById('inv-panel-' + t);
+    if (btn)   btn.classList.toggle('active', t === tab);
+    if (panel) panel.style.display = t === tab ? 'block' : 'none';
   });
+  if (tab === 'inventario') invRenderStock();
+  if (tab === 'historial')  invRenderHistorial();
+  if (tab === 'gestion')    invRenderGestion();
+  // Ocultar gestión para no-Admin
+  const btnG = document.getElementById('inv-tab-gestion');
+  if (btnG) btnG.style.display = (usuarioActual && usuarioActual.perfil.toLowerCase()==='admin') ? 'inline-flex' : 'none';
 }
 
-function poblarFiltroGrupos() {
-  const sel = document.getElementById('inv-filtro-grupo');
-  if (!sel) return;
-  const grupos = [...new Set(invInsumos.map(i => i.grupo).filter(Boolean))].sort();
-  sel.innerHTML = '<option value="">Todos los grupos</option>';
-  grupos.forEach(g => {
-    const opt = document.createElement('option');
-    opt.value = g; opt.textContent = g;
-    sel.appendChild(opt);
-  });
+// ── Registro ──────────────────────────────────────────────────
+function setInvTipo(tipo) {
+  invTipoActual = tipo;
+  invUsoTipo    = 'unidad';
+  const esEntrada = tipo === 'entrada';
+  const acc = 'var(--accent)', accBg = 'var(--accent-bg)', muted = 'var(--muted)', bdr = 'var(--border)';
+  const activeCSS   = `flex:1;padding:11px 0;border-radius:10px;border:2px solid ${acc};background:${accBg};color:${acc};font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif`;
+  const inactiveCSS = `flex:1;padding:11px 0;border-radius:10px;border:2px solid ${bdr};background:transparent;color:${muted};font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif`;
+  document.getElementById('inv-btn-entrada').style.cssText = esEntrada ? activeCSS : inactiveCSS;
+  document.getElementById('inv-btn-uso').style.cssText     = !esEntrada ? activeCSS.replace(acc,'var(--danger)').replace(accBg,'rgba(239,68,68,.12)').replace(acc,'var(--danger)') : inactiveCSS;
+  // Costo solo en entrada
+  const cs = document.getElementById('inv-costo-section');
+  if (cs) cs.style.display = esEntrada ? 'block' : 'none';
+  // Botón texto
+  const btn = document.getElementById('inv-btn-registrar');
+  if (btn) btn.textContent = esEntrada ? '📥 Registrar entrada' : '📤 Registrar uso';
+  // Nota placeholder
+  const nota = document.getElementById('inv-f-nota');
+  if (nota) nota.placeholder = esEntrada ? 'Ej: SAMS CLUB, proveedor...' : 'Ej: Para sopa del almuerzo';
+  invLimpiarInsumo();
 }
 
-function filtrarStock() {
-  renderStock();
-}
+function invFiltrarInsumos() {
+  const q     = (document.getElementById('inv-f-buscar').value || '').trim().toLowerCase();
+  const lista = document.getElementById('inv-f-lista');
+  if (!q) { lista.style.display = 'none'; return; }
 
-function renderStock() {
-  const buscar = (document.getElementById('inv-buscar')?.value || '').toLowerCase();
-  const grupo  = document.getElementById('inv-filtro-grupo')?.value || '';
-  const tbody  = document.getElementById('inv-tbody-stock');
-  if (!tbody) return;
-
-  const filtrados = invInsumos.filter(i => {
-    const matchNombre = !buscar || i.nombre.toLowerCase().includes(buscar);
-    const matchGrupo  = !grupo  || i.grupo === grupo;
-    return matchNombre && matchGrupo;
+  const base = invTipoActual === 'entrada' ? invInsumos : invInsumos.filter(i => {
+    const cat = i.categoria || 'ambos';
+    const rol = (usuarioActual?.perfil||'').toLowerCase();
+    if (rol === 'caja' && cat === 'cocina') return false;
+    return true;
   });
-
-  // Métricas
-  const valorTotal = invInsumos.reduce((a,i) => a + (i.stock * i.precio), 0);
-  const stockBajo  = invInsumos.filter(i => i.stock > 0 && i.stock <= 2).length;
-  const sinStock   = invInsumos.filter(i => i.stock <= 0).length;
-
-  document.getElementById('inv-total-prod').textContent  = invInsumos.length;
-  document.getElementById('inv-valor-total').textContent = fmt(valorTotal);
-  document.getElementById('inv-stock-bajo').textContent  = stockBajo;
-  document.getElementById('inv-sin-stock').textContent   = sinStock;
+  const filtrados = base.filter(i => i.nombre.toLowerCase().includes(q));
 
   if (!filtrados.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--muted)">Sin resultados</td></tr>';
-    return;
+    lista.innerHTML = '<div style="padding:10px 14px;color:var(--muted);font-size:13px">Sin resultados</div>';
+    lista.style.display = 'block'; return;
   }
-
-  tbody.innerHTML = '';
-  filtrados
-    .sort((a,b) => a.nombre.localeCompare(b.nombre))
-    .forEach(i => {
-      const valor = i.stock * i.precio;
-      const stockOk = i.stock > 2 ? 'var(--accent)' : i.stock > 0 ? 'orange' : 'var(--danger)';
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${i.nombre}</td>
-        <td style="color:var(--muted);font-size:12px">${i.grupo}</td>
-        <td style="text-align:center">${i.unidad}</td>
-        <td style="text-align:center;font-weight:500;color:${stockOk}">${i.stock}</td>
-        <td style="text-align:center;color:var(--muted)">${i.stockEnPiezas||0}</td>
-        <td style="text-align:right">${fmt(i.precio)}</td>
-        <td style="text-align:right;font-weight:500">${fmt(valor)}</td>`;
-      tbody.appendChild(tr);
-    });
+  lista.innerHTML = filtrados.map(i => {
+    const si  = invStockInfo(i);
+    const low = i.stock < 1;
+    return `<div onclick="invSeleccionarInsumo(${i.id})"
+      style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center"
+      onmouseover="this.style.background='var(--hi-bg)'" onmouseout="this.style.background=''">
+      <span style="font-weight:600">${i.nombre}</span>
+      <span style="font-size:12px;color:${low?'var(--danger)':'var(--muted)'}">${si.texto}${low?' ⚠':''}</span>
+    </div>`;
+  }).join('');
+  lista.style.display = 'block';
 }
 
-async function registrarMovimiento(tipo) {
-  const statusId = tipo === 'entrada' ? 'inv-e-status' : 'inv-s-status';
-  const st = document.getElementById(statusId);
-  st.textContent = ''; st.className = 'status';
+function invSeleccionarInsumo(id) {
+  const ins = invInsumos.find(i => i.id == id);
+  if (!ins) return;
+  invSelId = id;
+  document.getElementById('inv-f-buscar').style.display = 'none';
+  document.getElementById('inv-f-lista').style.display  = 'none';
+  const sel = document.getElementById('inv-f-sel');
+  document.getElementById('inv-f-sel-txt').textContent = ins.nombre;
+  sel.style.display = 'flex';
 
-  const fecha    = document.getElementById('inv-' + tipo[0] + '-fecha').value;
-  const producto = document.getElementById('inv-' + tipo[0] + '-producto').value;
-  const cantidad = parseFloat(document.getElementById('inv-' + tipo[0] + '-cantidad').value) || 0;
-  const nota     = document.getElementById('inv-' + tipo[0] + '-nota').value.trim();
+  // Stock badge
+  const badge = document.getElementById('inv-stock-badge');
+  const si    = invStockInfo(ins);
+  const low   = ins.stock < 1;
+  badge.textContent = 'Stock: ' + si.texto + (low ? ' ⚠ Bajo' : '');
+  badge.style.cssText = `display:inline-block;padding:4px 14px;border-radius:20px;font-size:13px;font-weight:600;margin-bottom:12px;background:${low?'rgba(239,68,68,.15)':'var(--accent-bg)'};color:${low?'var(--danger)':'var(--accent)'}`;
 
-  if (!fecha)    { st.textContent='Ingresa una fecha.';    st.className='status error'; return; }
-  if (!producto) { st.textContent='Selecciona un producto.'; st.className='status error'; return; }
-  if (!cantidad) { st.textContent='Ingresa una cantidad.'; st.className='status error'; return; }
+  // Toggle pieza/unidad en uso
+  const toggle = document.getElementById('inv-uso-toggle');
+  const info   = document.getElementById('inv-uso-info');
+  const ppu    = toInt(ins.piezasPorUnidad);
+  if (ppu > 0 && invTipoActual === 'uso') {
+    toggle.style.display = 'flex';
+    info.style.display   = 'block';
+    info.textContent     = '1 ' + ins.unidad + ' = ' + ppu + ' piezas';
+    setInvUsoTipo('pieza');
+    document.getElementById('inv-cant-label').textContent = 'Cantidad (piezas)';
+  } else {
+    toggle.style.display = 'none';
+    info.style.display   = 'none';
+    document.getElementById('inv-cant-label').textContent = 'Cantidad (' + ins.unidad + ')';
+  }
+}
 
-  const insumo = invInsumos.find(i => i.nombre === producto);
-  if (!insumo) { st.textContent='Producto no encontrado.'; st.className='status error'; return; }
+function invLimpiarInsumo() {
+  invSelId = null;
+  document.getElementById('inv-f-buscar').style.display = 'block';
+  document.getElementById('inv-f-buscar').value = '';
+  document.getElementById('inv-f-lista').style.display  = 'none';
+  document.getElementById('inv-f-sel').style.display    = 'none';
+  document.getElementById('inv-stock-badge').style.display = 'none';
+  document.getElementById('inv-uso-toggle').style.display  = 'none';
+  document.getElementById('inv-uso-info').style.display    = 'none';
+  document.getElementById('inv-cant-equiv').style.display  = 'none';
+  document.getElementById('inv-cant-label').textContent = 'Cantidad';
+  document.getElementById('inv-f-cant').value  = '';
+  document.getElementById('inv-f-nota').value  = '';
+  if (document.getElementById('inv-f-costo')) document.getElementById('inv-f-costo').value = '';
+}
 
-  // Verificar stock suficiente para salidas
-  if (tipo === 'salida' && insumo.stock < cantidad) {
-    st.textContent = '⚠️ Stock insuficiente. Disponible: ' + insumo.stock + ' ' + insumo.unidad;
+function setInvUsoTipo(tipo) {
+  invUsoTipo = tipo;
+  const ins = invInsumos.find(i => i.id == invSelId);
+  if (!ins) return;
+  const ppu   = toInt(ins.piezasPorUnidad);
+  const acc   = 'var(--accent)', accBg = 'var(--accent-bg)', muted = 'var(--muted)', bdr = 'var(--border)';
+  const onCSS = `flex:1;padding:9px 0;border-radius:10px;border:2px solid ${acc};background:${accBg};color:${acc};font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif`;
+  const offCSS= `flex:1;padding:9px 0;border-radius:10px;border:2px solid ${bdr};background:transparent;color:${muted};font-weight:700;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif`;
+  document.getElementById('inv-btn-pieza').style.cssText  = tipo==='pieza'  ? onCSS : offCSS;
+  document.getElementById('inv-btn-unidad').style.cssText = tipo==='unidad' ? onCSS : offCSS;
+  const label = document.getElementById('inv-cant-label');
+  if (tipo === 'pieza')  { label.textContent = 'Cantidad (piezas)'; document.getElementById('inv-f-cant').placeholder = 'Ej: 3 piezas'; }
+  else                   { label.textContent = 'Cantidad (' + ins.unidad + 's completas)'; document.getElementById('inv-f-cant').placeholder = 'Ej: 1 ' + ins.unidad; }
+  document.getElementById('inv-f-cant').value = '';
+  document.getElementById('inv-cant-equiv').style.display = 'none';
+}
+
+function invOnCantChange() {
+  const ins   = invInsumos.find(i => i.id == invSelId);
+  const cant  = toNum(document.getElementById('inv-f-cant').value);
+  const equiv = document.getElementById('inv-cant-equiv');
+  if (!ins || !cant) { equiv.style.display='none'; return; }
+  const ppu = toInt(ins.piezasPorUnidad);
+  if (!ppu)  { equiv.style.display='none'; return; }
+  if (invUsoTipo === 'pieza') {
+    const cajas   = Math.floor(cant / ppu);
+    const sueltas = cant % ppu;
+    let txt = '= ';
+    if (cajas > 0)   txt += cajas + ' ' + ins.unidad + (cajas>1?'s':'');
+    if (sueltas > 0) txt += (cajas?'+':'') + sueltas + ' pieza' + (sueltas>1?'s':'') + ' suelta' + (sueltas>1?'s':'');
+    equiv.textContent = txt;
+  } else {
+    equiv.textContent = '= ' + (cant * ppu) + ' piezas';
+  }
+  equiv.style.display = 'block';
+}
+
+async function invDoRegistrar() {
+  const st   = document.getElementById('inv-status');
+  const ins  = invInsumos.find(i => i.id == invSelId);
+  const cant = toNum(document.getElementById('inv-f-cant').value);
+  const nota = (document.getElementById('inv-f-nota').value||'').trim();
+
+  st.textContent=''; st.className='status';
+  if (!ins)  { st.textContent='Selecciona un insumo.'; st.className='status error'; return; }
+  if (!cant) { st.textContent='Ingresa la cantidad.';  st.className='status error'; return; }
+
+  const ppu = toInt(ins.piezasPorUnidad);
+  let deltaUnidades = cant;
+  let unidMov = ins.unidad;
+  let cantMov = cant;
+  if (ppu > 0 && invTipoActual === 'uso' && invUsoTipo === 'pieza') {
+    deltaUnidades = cant / ppu;
+    unidMov = 'pieza';
+  }
+
+  if (invTipoActual === 'uso' && deltaUnidades > ins.stock) {
+    const si = invStockInfo(ins);
+    st.textContent = '⚠️ Stock insuficiente. Disponible: ' + si.texto;
     st.className = 'status error'; return;
   }
 
-  const costo = tipo === 'entrada'
-    ? (parseFloat(document.getElementById('inv-e-costo').value) || null)
-    : null;
-  const motivo = tipo === 'salida'
-    ? document.getElementById('inv-s-motivo').value
-    : '';
+  const costoEl = document.getElementById('inv-f-costo');
+  const costo   = costoEl && costoEl.value ? toNum(costoEl.value) : null;
 
   st.textContent = 'Guardando...';
+  const now = new Date();
+  const mov = {
+    id:        invTipoActual[0].toUpperCase() + now.getTime(),
+    tipo:      invTipoActual,
+    fecha:     now.toISOString().slice(0,10),
+    hora:      now.toTimeString().slice(0,5),
+    timestamp: now.toISOString(),
+    usuario:   usuarioActual ? usuarioActual.usuario : '',
+    rol:       usuarioActual ? usuarioActual.perfil  : '',
+    insumoNombre: ins.nombre,
+    unidad:    unidMov,
+    cantidad:  cantMov,
+    costo:     invTipoActual==='entrada' ? costo : null,
+    nota:      nota
+  };
 
   try {
-    const now  = new Date();
-    const hora = now.toTimeString().slice(0,5);
-    const mov  = {
-      id:           tipo[0].toUpperCase() + now.getTime(),
-      tipo:         tipo,
-      fecha:        fecha,
-      hora:         hora,
-      timestamp:    now.toISOString(),
-      usuario:      usuarioActual ? usuarioActual.usuario : '',
-      rol:          usuarioActual ? usuarioActual.perfil  : '',
-      insumoNombre: producto,
-      unidad:       insumo.unidad,
-      cantidad:     cantidad,
-      costo:        costo,
-      nota:         motivo ? motivo + (nota ? ': ' + nota : '') : nota
-    };
+    const newStock = invTipoActual === 'entrada'
+      ? +(ins.stock + deltaUnidades).toFixed(4)
+      : +(ins.stock - deltaUnidades).toFixed(4);
+    const newPrecio = (invTipoActual==='entrada' && costo && costo>0) ? +costo.toFixed(2) : ins.precio;
+    const newSPE    = ppu > 0 ? Math.round(newStock * ppu) : newStock;
+    invInsumos = invInsumos.map(i => i.id==ins.id ? {...i,stock:newStock,precio:newPrecio,stockEnPiezas:newSPE} : i);
+    invMovs.unshift(mov);
 
-    const res  = await fetch(INV_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'addMovimiento', data: mov })
-    });
-    const data = await res.json();
+    await Promise.all([
+      fetch(INV_URL, {method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'saveInsumos',data:invInsumos})}),
+      fetch(INV_URL, {method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'addMovimiento',data:mov})})
+    ]);
 
-    if (data.ok || data.error === undefined) {
-      // Actualizar stock localmente
-      const idx = invInsumos.findIndex(i => i.nombre === producto);
-      if (idx >= 0) {
-        if (tipo === 'entrada') invInsumos[idx].stock += cantidad;
-        else                    invInsumos[idx].stock -= cantidad;
-        if (invInsumos[idx].stock < 0) invInsumos[idx].stock = 0;
-        // Recalcular stockEnPiezas
-        const ppu = invInsumos[idx].piezasPorUnidad || 1;
-        invInsumos[idx].stockEnPiezas = Math.round(invInsumos[idx].stock * ppu);
-      }
-
-      // Guardar insumos actualizados
-      await fetch(INV_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'saveInsumos', data: invInsumos })
-      });
-
-      st.textContent = tipo === 'entrada' ? '✅ Entrada registrada.' : '✅ Salida registrada.';
-      st.className = 'status';
-
-      // Limpiar campos
-      document.getElementById('inv-' + tipo[0] + '-cantidad').value = '';
-      document.getElementById('inv-' + tipo[0] + '-nota').value = '';
-      if (tipo === 'entrada') document.getElementById('inv-e-costo').value = '';
-      document.getElementById('inv-' + tipo[0] + '-producto').value = '';
-
-      // Refrescar stock
-      renderStock();
-      invMovs.unshift(mov);
-
-    } else {
-      st.textContent = '⚠️ Error: ' + data.error;
-      st.className = 'status error';
-    }
+    const si  = invStockInfo({...ins,stock:newStock,piezasPorUnidad:ppu,stockEnPiezas:newSPE});
+    const msg = invTipoActual==='entrada'
+      ? '✅ +' + cant + ' ' + (ppu>0?ins.unidad+'(s) ('+cant*ppu+' pzas)':ins.unidad) + ' de ' + ins.nombre
+      : '✅ -' + cant + ' ' + unidMov + ' de ' + ins.nombre;
+    st.textContent = msg; st.className = 'status';
+    invLimpiarInsumo();
+    invRenderUltimos();
   } catch(e) {
-    st.textContent = '⚠️ Error de conexión.'; st.className = 'status error';
+    st.textContent = '⚠️ Error: ' + e.message; st.className = 'status error';
   }
 }
 
-function filtrarMovs() {
-  renderMovs();
-}
-
-function renderMovs() {
-  const tipo  = document.getElementById('inv-filtro-tipo')?.value || '';
-  const desde = document.getElementById('inv-filtro-desde')?.value || '';
-  const hasta = document.getElementById('inv-filtro-hasta')?.value || '';
-  const tbody = document.getElementById('inv-tbody-movs');
-  if (!tbody) return;
-
-  let filtrados = [...invMovs];
-  if (tipo)  filtrados = filtrados.filter(m => m.tipo === tipo);
-  if (desde) filtrados = filtrados.filter(m => String(m.fecha) >= desde);
-  if (hasta) filtrados = filtrados.filter(m => String(m.fecha) <= hasta);
-
-  // Ordenar por fecha descendente
-  filtrados.sort((a,b) => String(b.fecha+b.hora).localeCompare(String(a.fecha+a.hora)));
-  filtrados = filtrados.slice(0, 50); // últimos 50
-
-  if (!filtrados.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--muted)">Sin movimientos</td></tr>';
-    return;
-  }
-
-  tbody.innerHTML = '';
-  filtrados.forEach(m => {
-    const color = m.tipo === 'entrada' ? 'var(--accent)' : 'var(--danger)';
-    const icon  = m.tipo === 'entrada' ? '📥' : '📤';
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${labelFecha(String(m.fecha).substring(0,10))}</td>
-      <td><span style="color:${color};font-size:13px">${icon} ${m.tipo}</span></td>
-      <td>${m.insumoNombre}</td>
-      <td style="text-align:center;font-weight:500">${m.cantidad} ${m.unidad}</td>
-      <td style="text-align:right">${m.costo ? fmt(m.costo) : '—'}</td>
-      <td style="color:var(--muted);font-size:12px">${m.nota||'—'}</td>
-      <td style="color:var(--muted);font-size:12px">${m.usuario||'—'}</td>`;
-    tbody.appendChild(tr);
+function invRenderUltimos() {
+  const div = document.getElementById('inv-ultimos');
+  if (!div) return;
+  const lista = invMovs.slice(0, 5);
+  if (!lista.length) { div.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:10px 0">Sin movimientos</div>'; return; }
+  let html = '<div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Últimos movimientos</div>';
+  lista.forEach(m => {
+    const esE  = m.tipo === 'entrada';
+    const col  = esE ? 'var(--accent)' : 'var(--danger)';
+    const bg   = esE ? 'var(--accent-bg)' : 'rgba(239,68,68,.12)';
+    const ico  = esE ? '📥' : '📤';
+    html += `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="width:34px;height:34px;border-radius:8px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${ico}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:14px">${m.insumoNombre}</div>
+        <div style="font-size:12px;color:var(--muted)">${m.fecha} · ${m.hora} · ${m.usuario||'—'}</div>
+        ${m.nota?`<div style="font-size:12px;color:var(--muted);font-style:italic">${m.nota}</div>`:''}
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-weight:700;color:${col}">${esE?'+':'-'}${m.cantidad} ${m.unidad}</div>
+        ${m.costo?`<div style="font-size:12px;color:var(--muted)">${fmtM(m.costo)}</div>`:''}
+      </div>
+    </div>`;
   });
+  div.innerHTML = html;
+}
+
+// ── Stock ─────────────────────────────────────────────────────
+function invPoblarFiltros() {
+  const grupos = [...new Set(invInsumos.map(i => i.grupo||'Otros'))].sort();
+
+  // Filtro grupo en stock
+  const selG = document.getElementById('inv-filtro-grupo');
+  if (selG) {
+    const v = selG.value;
+    selG.innerHTML = '<option value="">Todos los grupos</option>' + grupos.map(g=>`<option value="${g}">${g}</option>`).join('');
+    selG.value = v;
+  }
+  // Filtro insumo en historial
+  const selH = document.getElementById('inv-h-insumo');
+  if (selH) {
+    const v = selH.value;
+    selH.innerHTML = '<option value="">Todos los insumos</option>' + invInsumos.sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(i=>`<option value="${i.id}">${i.nombre}</option>`).join('');
+    selH.value = v;
+  }
+  // Datalist grupos en gestión
+  const dl = document.getElementById('inv-grupos-list');
+  if (dl) dl.innerHTML = grupos.map(g=>`<option value="${g}">`).join('');
+  // Filtro grupo en gestión
+  const selGG = document.getElementById('inv-g-grupo');
+  if (selGG) {
+    const v = selGG.value;
+    selGG.innerHTML = '<option value="">Todos</option>' + grupos.map(g=>`<option value="${g}">${g}</option>`).join('');
+    selGG.value = v;
+  }
+}
+
+function invRenderStock() {
+  const buscar = (document.getElementById('inv-buscar-stock')?.value||'').toLowerCase();
+  const grupo  = document.getElementById('inv-filtro-grupo')?.value||'';
+  const div    = document.getElementById('inv-lista-stock');
+  if (!div) return;
+
+  const esAdmin = usuarioActual && usuarioActual.perfil.toLowerCase() === 'admin';
+  const lista   = invInsumos.filter(i => {
+    if (buscar && !i.nombre.toLowerCase().includes(buscar)) return false;
+    if (grupo && (i.grupo||'Otros') !== grupo) return false;
+    return true;
+  });
+
+  // Métricas
+  const valorTotal = invInsumos.reduce((a,i) => a + toNum(i.precio)*toNum(i.stock), 0);
+  document.getElementById('inv-m-total').textContent = invInsumos.length;
+  document.getElementById('inv-m-valor').textContent = fmtM(valorTotal);
+  document.getElementById('inv-m-bajo').textContent  = invInsumos.filter(i=>i.stock>0&&i.stock<=2).length;
+  document.getElementById('inv-m-sin').textContent   = invInsumos.filter(i=>i.stock<=0).length;
+
+  if (!lista.length) { div.innerHTML='<div style="text-align:center;padding:2rem;color:var(--muted)">Sin resultados</div>'; return; }
+
+  // Agrupar
+  const porGrupo = {};
+  lista.forEach(i => { const g=i.grupo||'Otros'; if(!porGrupo[g]) porGrupo[g]=[]; porGrupo[g].push(i); });
+
+  let html = '';
+  Object.keys(porGrupo).sort().forEach(g => {
+    html += `<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);padding:10px 0 6px;border-top:1px solid var(--border);margin-top:4px">${g}</div>`;
+    porGrupo[g].forEach(i => {
+      const si  = invStockInfo(i);
+      const ppu = toInt(i.piezasPorUnidad);
+      const low = i.stock < 1;
+      const col = low ? 'var(--danger)' : i.stock<=2 ? 'orange' : 'var(--accent)';
+      const brd = low ? 'var(--danger)' : i.stock<=2 ? 'orange' : 'var(--accent)';
+      html += `<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface);border-radius:10px;border:1px solid var(--border);border-left:4px solid ${brd};margin-bottom:8px">
+        <div style="font-size:22px;flex-shrink:0">🫙</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:15px">${i.nombre}</div>
+          <div style="font-size:12px;color:var(--muted)">${i.unidad}${ppu>0?' · '+ppu+' pzas/'+i.unidad:''}</div>
+          ${ppu>0&&si.cajas>0?`<div style="font-size:13px;color:var(--accent);font-weight:600">📦 ${si.cajas} ${i.unidad}${si.cajas>1?'s':''}</div>`:''}
+          ${ppu>0&&si.piezasSueltas>0?`<div style="font-size:13px;color:orange;font-weight:600">🔹 ${si.piezasSueltas} pieza${si.piezasSueltas>1?'s':''} suelta${si.piezasSueltas>1?'s':''}</div>`:''}
+          ${ppu>0?`<div style="font-size:11px;color:var(--muted)">${si.totalPiezas} pzas total</div>`:''}
+          ${esAdmin&&i.precio?`<div style="font-size:12px;color:var(--muted)">Precio: ${fmtM(i.precio)}/${i.unidad}</div>`:''}
+          ${esAdmin&&i.precio&&i.stock?`<div style="font-size:12px;font-weight:600;color:var(--accent)">Valor: ${fmtM(i.precio*i.stock)}</div>`:''}
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          ${ppu>0
+            ?`<div style="font-weight:800;font-size:22px;color:${col}">${si.cajas}<span style="font-size:12px;font-weight:400"> ${i.unidad}${si.cajas>1?'s':''}</span></div>
+              ${si.piezasSueltas>0?`<div style="font-size:13px;color:orange;font-weight:700">+${si.piezasSueltas} pza${si.piezasSueltas>1?'s':''}</div>`:''}`
+            :`<div style="font-weight:800;font-size:24px;color:${col}">${i.stock}</div><div style="font-size:12px;color:var(--muted)">${i.unidad}</div>`
+          }
+          ${low?'<div style="font-size:11px;color:var(--danger);font-weight:600">⚠ Bajo</div>':''}
+        </div>
+      </div>`;
+    });
+  });
+  div.innerHTML = html;
+}
+
+// ── Historial ─────────────────────────────────────────────────
+function invRenderHistorial() {
+  const selIns  = document.getElementById('inv-h-insumo')?.value||'';
+  const selTipo = document.getElementById('inv-h-tipo')?.value||'';
+  const desde   = document.getElementById('inv-h-desde')?.value||'';
+  const hasta   = document.getElementById('inv-h-hasta')?.value||'';
+  const div     = document.getElementById('inv-h-lista');
+  const resDiv  = document.getElementById('inv-h-resumen');
+  const esAdmin = usuarioActual && usuarioActual.perfil.toLowerCase() === 'admin';
+  if (!div) return;
+
+  let lista = invMovs.filter(m => {
+    if (selIns  && String(invInsumos.find(i=>i.nombre===m.insumoNombre)?.id||'') !== selIns) return false;
+    if (selTipo && m.tipo !== selTipo) return false;
+    if (desde   && m.fecha < desde) return false;
+    if (hasta   && m.fecha > hasta) return false;
+    return true;
+  });
+
+  // Resumen
+  if (lista.length && resDiv) {
+    const entradas = lista.filter(m=>m.tipo==='entrada').reduce((a,m)=>a+toNum(m.cantidad),0);
+    const usos     = lista.filter(m=>m.tipo==='uso').reduce((a,m)=>a+toNum(m.cantidad),0);
+    const costo    = lista.filter(m=>m.tipo==='entrada'&&m.costo).reduce((a,m)=>a+toNum(m.costo),0);
+    resDiv.innerHTML = `
+      <div class="rmetric"><div class="rl">Entradas</div><div class="rv green">${entradas.toFixed(1)}</div></div>
+      <div class="rmetric"><div class="rl">Usos</div><div class="rv" style="color:var(--danger)">${usos.toFixed(1)}</div></div>
+      ${esAdmin&&costo>0?`<div class="rmetric"><div class="rl">Costo</div><div class="rv" style="color:var(--accent)">${fmtM(costo)}</div></div>`:''}`;
+    resDiv.style.display = 'grid';
+  } else if (resDiv) { resDiv.style.display='none'; }
+
+  if (!lista.length) { div.innerHTML='<div style="text-align:center;padding:2rem;color:var(--muted)">Sin movimientos</div>'; return; }
+
+  div.innerHTML = lista.map(m => {
+    const esE = m.tipo === 'entrada';
+    const col = esE ? 'var(--accent)' : 'var(--danger)';
+    const bg  = esE ? 'var(--accent-bg)' : 'rgba(239,68,68,.12)';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="width:34px;height:34px;border-radius:8px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${esE?'📥':'📤'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:14px">${m.insumoNombre}</div>
+        <div style="font-size:12px;color:var(--muted)">${m.fecha} · ${m.hora||''} · ${m.usuario||'—'}</div>
+        ${m.nota?`<div style="font-size:12px;color:var(--muted);font-style:italic">${m.nota}</div>`:''}
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-weight:700;color:${col}">${esE?'+':'-'}${m.cantidad} ${m.unidad}</div>
+        ${m.costo&&esAdmin?`<div style="font-size:12px;color:var(--muted)">${fmtM(m.costo)}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function invExportarExcel() {
+  const lista = invMovs;
+  if (!lista.length) { alert('No hay movimientos para exportar'); return; }
+  try {
+    const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs');
+    const dataMov = lista.map(m => {
+      const ins  = invInsumos.find(i=>i.nombre===m.insumoNombre);
+      const ppu  = ins ? toInt(ins.piezasPorUnidad) : 0;
+      const prec = ins ? toNum(ins.precio) : 0;
+      const precPza = ppu > 0 ? prec/ppu : prec;
+      return {
+        Tipo:     m.tipo==='entrada'?'Entrada':'Uso',
+        Fecha:    m.fecha, Hora: m.hora||'',
+        Usuario:  m.usuario||'', Perfil: m.rol||'',
+        Insumo:   m.insumoNombre,
+        Cantidad: m.cantidad, Unidad: m.unidad,
+        'Precio entrada ($)': m.tipo==='entrada'?(m.costo||''):'',
+        'Costo uso ($)': m.tipo==='uso'? +(((m.unidad==='pieza'?precPza:prec)*m.cantidad).toFixed(2)) : '',
+        Nota: m.nota||''
+      };
+    });
+    const dataStock = invInsumos.map(i => ({
+      Grupo:i.grupo||'Otros', Insumo:i.nombre, Unidad:i.unidad,
+      'Stock (unidades)':i.stock, 'Piezas/unidad':i.piezasPorUnidad||0,
+      'Total piezas':i.stockEnPiezas||0,
+      'Precio ($)':i.precio||0,
+      'Valor total ($)':+((i.precio||0)*i.stock).toFixed(2)
+    }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dataMov),   'Movimientos');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dataStock), 'Stock actual');
+    XLSX.writeFile(wb, 'inventario_' + new Date().toISOString().slice(0,10) + '.xlsx');
+  } catch(e) { alert('Error al exportar: ' + e.message); }
+}
+
+// ── Gestión ───────────────────────────────────────────────────
+function invRenderGestion() {
+  invPoblarFiltros();
+  const q  = (document.getElementById('inv-g-buscar')?.value||'').toLowerCase();
+  const g  = document.getElementById('inv-g-grupo')?.value||'';
+  const div = document.getElementById('inv-g-lista');
+  if (!div) return;
+
+  const lista = invInsumos.filter(i => {
+    if (q && !i.nombre.toLowerCase().includes(q)) return false;
+    if (g && (i.grupo||'Otros') !== g) return false;
+    return true;
+  });
+
+  if (!lista.length) { div.innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--muted)">Sin resultados</div>'; return; }
+
+  div.innerHTML = lista.map(i => {
+    const cat = i.categoria||'ambos';
+    const catL = cat==='cocina'?'👨‍🍳 Cocina':cat==='venta'?'🛒 Venta':'🔀 Ambos';
+    const si   = invStockInfo(i);
+    const ppu  = toInt(i.piezasPorUnidad);
+    const stkL = ppu>0 ? si.texto : i.stock+' '+i.unidad;
+    return `<div style="padding:12px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div>
+          <div style="font-weight:600">${i.nombre}</div>
+          <div style="font-size:12px;color:var(--muted)">${stkL} · ${i.precio?fmtM(i.precio):'sin precio'} · ${catL}</div>
+        </div>
+        <div id="inv-del-${i.id}">
+          <button class="btn-corregir" style="color:var(--danger);border-color:var(--danger)" onclick="invConfirmDel(${i.id})">Eliminar</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input id="inv-ep-${i.id}" type="text" inputmode="decimal" value="${i.precio||''}" placeholder="Precio $"
+          style="width:90px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg);color:var(--text)"/>
+        <input id="inv-eg-${i.id}" value="${i.grupo||'Otros'}" placeholder="Grupo" list="inv-grupos-list"
+          style="width:90px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg);color:var(--text)"/>
+        <input id="inv-epz-${i.id}" type="text" inputmode="numeric" value="${i.piezasPorUnidad||0}" placeholder="Pzas"
+          title="Piezas por unidad"
+          style="width:55px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg);color:var(--text)"/>
+        <select id="inv-ec-${i.id}" style="padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg);color:var(--text);flex:1">
+          <option value="ambos"  ${cat==='ambos' ?'selected':''}>🔀 Ambos</option>
+          <option value="cocina" ${cat==='cocina'?'selected':''}>👨‍🍳 Cocina</option>
+          <option value="venta"  ${cat==='venta' ?'selected':''}>🛒 Venta</option>
+        </select>
+        <button class="btn-corregir" style="color:var(--accent);border-color:var(--accent)" onclick="invGuardarEdits(${i.id})">✓ Guardar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function invGuardarEdits(id) {
+  const precio    = toNum(document.getElementById('inv-ep-'+id).value);
+  const grupo     = (document.getElementById('inv-eg-'+id).value||'Otros').trim();
+  const pzs       = Math.round(toNum(document.getElementById('inv-epz-'+id).value));
+  const categoria = document.getElementById('inv-ec-'+id).value;
+  invInsumos = invInsumos.map(i => {
+    if (i.id != id) return i;
+    const spe = pzs > 0 ? Math.round(i.stock*pzs) : i.stock;
+    return {...i, precio, grupo, piezasPorUnidad:pzs, stockEnPiezas:spe, categoria};
+  });
+  try {
+    await fetch(INV_URL, {method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'saveInsumos',data:invInsumos})});
+    invRenderGestion();
+    invPoblarFiltros();
+  } catch(e) { alert('Error guardando: ' + e.message); }
+}
+
+function invConfirmDel(id) {
+  if (invDelConfirm === id) { invDoEliminar(id); return; }
+  invDelConfirm = id;
+  document.getElementById('inv-del-'+id).innerHTML = `
+    <button class="btn-corregir" style="color:var(--danger);border-color:var(--danger)" onclick="invDoEliminar(${id})">Confirmar</button>
+    <button class="btn-corregir" onclick="invCancelDel(${id})" style="margin-left:4px">Cancelar</button>`;
+}
+function invCancelDel(id) {
+  invDelConfirm = null;
+  document.getElementById('inv-del-'+id).innerHTML = `<button class="btn-corregir" style="color:var(--danger);border-color:var(--danger)" onclick="invConfirmDel(${id})">Eliminar</button>`;
+}
+async function invDoEliminar(id) {
+  invInsumos = invInsumos.filter(i => i.id != id);
+  invDelConfirm = null;
+  try {
+    await fetch(INV_URL, {method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'eliminarInsumo',id})});
+    invRenderGestion(); invPoblarFiltros();
+  } catch(e) { alert('Error eliminando'); }
+}
+
+async function invAgregarInsumo() {
+  const st     = document.getElementById('inv-gestion-status');
+  const nombre = (document.getElementById('inv-n-nombre').value||'').trim();
+  if (!nombre) { st.textContent='Escribe el nombre.'; st.className='status error'; return; }
+  if (invInsumos.some(i=>i.nombre.toLowerCase()===nombre.toLowerCase())) {
+    st.textContent='Ya existe "'+nombre+'".'; st.className='status error'; return;
+  }
+  const ppu      = Math.round(toNum(document.getElementById('inv-n-piezas').value));
+  const stock    = toNum(document.getElementById('inv-n-stock').value);
+  const spe      = ppu > 0 ? Math.round(stock*ppu) : stock;
+  const nuevo = {
+    id:            Date.now(),
+    nombre,
+    unidad:        document.getElementById('inv-n-unidad').value,
+    stock,
+    precio:        toNum(document.getElementById('inv-n-precio').value),
+    categoria:     document.getElementById('inv-n-categoria').value||'ambos',
+    grupo:         (document.getElementById('inv-n-grupo').value||'Otros').trim(),
+    piezasPorUnidad: ppu,
+    stockEnPiezas: spe
+  };
+  invInsumos = [...invInsumos, nuevo];
+  try {
+    await fetch(INV_URL, {method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'saveInsumos',data:invInsumos})});
+    st.textContent = '✅ "'+nombre+'" agregado.'; st.className='status';
+    ['inv-n-nombre','inv-n-stock','inv-n-precio','inv-n-grupo','inv-n-piezas'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.value='';
+    });
+    document.getElementById('inv-n-unidad').value    = 'kg';
+    document.getElementById('inv-n-categoria').value = 'ambos';
+    invPoblarFiltros(); invRenderGestion();
+  } catch(e) { st.textContent='Error guardando.'; st.className='status error'; }
 }
 
 // ── Init ─────────────────────────────────────────────────────
