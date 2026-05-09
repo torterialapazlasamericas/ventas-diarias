@@ -383,7 +383,11 @@ tbody tr{animation:fadeIn .2s ease;}
       <!-- PASO 3: CONSUMO EN VENTA -->
       <div id="vw-paso3" class="vw-step">
         <h2 style="font-family:'DM Serif Display',serif;font-weight:400;font-size:20px;margin-bottom:.5rem">📦 Consumo en venta</h2>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:1.25rem">Ingresa las cantidades usadas hoy. Deja en 0 si no se usó.</p>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:1rem">Ingresa las cantidades usadas. Deja en 0 si no se usó.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:4px">
+          <div style="text-align:center;padding:6px 4px;background:var(--accent);color:#fff;border-radius:8px 0 0 0;font-size:12px;font-weight:700;letter-spacing:.04em">USO</div>
+          <div style="text-align:center;padding:6px 4px;background:var(--blue);color:#fff;border-radius:0 8px 0 0;font-size:12px;font-weight:700;letter-spacing:.04em">CENA / CORTESÍA</div>
+        </div>
         <div id="vw-productos-list"></div>
       </div>
 
@@ -982,7 +986,18 @@ document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.visible').forEach(o=>o.classList.remove('visible'));});
 
 // ══════════════ WIZARD VENTAS ══════════════════════════════
-const VW_PRODUCTOS=['Pan tradicional','Pan mac','Refrescos','Lechitas','Jamaicas','Refresco desechable','Agua','Agua mineral','Coca cola sin azúcar'];
+// Productos con mapeo a insumos del inventario
+const VW_PRODUCTOS = [
+  { label: 'Pan tradicional',     insumo: 'Pan tradicional',          id: 'pan_trad' },
+  { label: 'Pan mac',             insumo: 'Pan mac',                  id: 'pan_mac' },
+  { label: 'Refrescos',           insumo: 'COCA COLA REGULAR 12OZ',   id: 'refrescos' },
+  { label: 'Lechitas',            insumo: 'LECHITA 500ML',            id: 'lechitas' },
+  { label: 'Jamaicas',            insumo: 'AGUA DE JAMAICA',          id: 'jamaicas' },
+  { label: 'Refresco desechable', insumo: 'COCA COLA 500ml DESECHABLE',id: 'refr_des' },
+  { label: 'Agua',                insumo: 'AGUA NATURAL 500ML',       id: 'agua' },
+  { label: 'Agua mineral',        insumo: 'AGUA MINERAL 500ML',       id: 'agua_min' },
+  { label: 'Coca cola sin azúcar',insumo: 'COCA COLA SIN AZUCAR 500ML',id: 'coca_sin' }
+];
 let vwFotoData=null, _vwPasoActual=1;
 
 function iniciarVentas() {
@@ -1043,7 +1058,7 @@ function vwSiguiente(p) {
     const st=document.getElementById('vw-status1');
     if (!fecha){st.textContent='Ingresa una fecha.';st.className='status error';return;}
     if (!ef&&!tj&&!tr&&!ra){st.textContent='Ingresa al menos un monto.';st.className='status error';return;}
-    if (ventasRows.some(r=>r.fecha===fecha)){st.textContent='⚠️ Ya existe un registro para el '+labelFecha(fecha)+'. Usa "Corregir" para editarlo.';st.className='status error';return;}
+    // Si la fecha ya existe, es una corrección → se sobreescribe (accion=agregar en el script actualiza si existe)
     st.textContent='';st.className='status';
     vwIrPaso(2,true);
   } else if(p===2){ vwIrPaso(3,true); }
@@ -1052,11 +1067,22 @@ function vwSiguiente(p) {
 
 function vwRenderProductos() {
   const div=document.getElementById('vw-productos-list'); if(!div)return;
-  div.innerHTML=VW_PRODUCTOS.map(p=>`
-    <div class="field" style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
-      <label style="flex:1;text-transform:none;font-size:14px;letter-spacing:0;color:var(--text);margin-bottom:0">${p}</label>
-      <input type="text" inputmode="numeric" id="vwp-${p.replace(/[^a-zA-Z0-9]/g,'_')}" placeholder="0" autocomplete="off" style="width:80px;text-align:center;margin-bottom:0"/>
+  const rows = VW_PRODUCTOS.map(p => `
+    <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border)">
+      <!-- Etiqueta -->
+      <div style="grid-column:1/-1;padding:8px 6px 2px;font-size:13px;font-weight:600;color:var(--text);background:var(--bg);border-top:1px solid var(--border)">${p.label}</div>
+      <!-- USO -->
+      <div style="padding:4px 6px 8px;border-right:1px solid var(--border)">
+        <input type="text" inputmode="numeric" id="vwp_uso_${p.id}" placeholder="0" autocomplete="off"
+          style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;text-align:center;background:var(--surface);color:var(--text)"/>
+      </div>
+      <!-- CENA -->
+      <div style="padding:4px 6px 8px;">
+        <input type="text" inputmode="numeric" id="vwp_cena_${p.id}" placeholder="0" autocomplete="off"
+          style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;text-align:center;background:var(--surface);color:var(--blue)"/>
+      </div>
     </div>`).join('');
+  div.innerHTML = `<div style="border:1px solid var(--border);border-radius:0 0 10px 10px;overflow:hidden">${rows}</div>`;
 }
 
 function vwSeleccionarFoto(event) {
@@ -1096,7 +1122,18 @@ async function vwGuardar() {
   const rappi=parseFloat(document.getElementById('v-rappi').value)||0;
   const propinas=parseFloat(document.getElementById('v-propinas').value)||0;
   const envio=parseFloat(document.getElementById('v-envio').value)||0;
-  const productosUsados=VW_PRODUCTOS.map(p=>({nombre:p,cantidad:parseFloat(document.getElementById('vwp-'+p.replace(/[^a-zA-Z0-9]/g,'_'))?.value)||0})).filter(p=>p.cantidad>0);
+  // Leer USO y CENA por separado
+  const productosUso = VW_PRODUCTOS.map(p=>({
+    nombre: p.label, insumo: p.insumo, id: p.id,
+    cantidad: parseFloat(document.getElementById('vwp_uso_'+p.id)?.value)||0,
+    nota: 'Consumo venta del día'
+  })).filter(p=>p.cantidad>0);
+  const productosCena = VW_PRODUCTOS.map(p=>({
+    nombre: p.label, insumo: p.insumo, id: p.id,
+    cantidad: parseFloat(document.getElementById('vwp_cena_'+p.id)?.value)||0,
+    nota: 'Cena o cortesía'
+  })).filter(p=>p.cantidad>0);
+  const productosUsados = [...productosUso, ...productosCena];
   st.textContent='Guardando venta...'; st.className='status';
   try {
     const p=new URLSearchParams({accion:'agregar',fecha,efectivo,tarjeta,transferencia:transfer,rappi,usuario:usuarioActual?usuarioActual.usuario:''});
@@ -1108,10 +1145,12 @@ async function vwGuardar() {
     if (productosUsados.length>0){
       st.textContent='Guardando consumo en inventario...';
       for(const prod of productosUsados){
-        const ins=invInsumos.find(i=>i.nombre.toLowerCase()===prod.nombre.toLowerCase());
+        // Buscar por insumo mapeado primero, luego por nombre del label
+        const ins=invInsumos.find(i=>i.nombre.toLowerCase()===(prod.insumo||prod.nombre).toLowerCase())
+                ||invInsumos.find(i=>i.nombre.toLowerCase()===prod.nombre.toLowerCase());
         if(!ins)continue;
         const now=new Date();
-        const mov={id:'S'+now.getTime()+Math.random().toString(36).slice(2,5),tipo:'uso',fecha,hora:now.toTimeString().slice(0,5),timestamp:now.toISOString(),usuario:usuarioActual?usuarioActual.usuario:'',rol:usuarioActual?usuarioActual.perfil:'',insumoNombre:ins.nombre,unidad:ins.unidad,cantidad:prod.cantidad,costo:null,nota:'Consumo venta del día'};
+        const mov={id:'S'+now.getTime()+Math.random().toString(36).slice(2,5),tipo:'uso',fecha,hora:now.toTimeString().slice(0,5),timestamp:now.toISOString(),usuario:usuarioActual?usuarioActual.usuario:'',rol:usuarioActual?usuarioActual.perfil:'',insumoNombre:ins.nombre,unidad:ins.unidad,cantidad:prod.cantidad,costo:null,nota:prod.nota||'Consumo venta del día'};
         const ppu=parseInt(ins.piezasPorUnidad)||0;
         const delta=ppu>0?prod.cantidad/ppu:prod.cantidad;
         const newStock=Math.max(0,+(ins.stock-delta).toFixed(4));
@@ -1176,9 +1215,13 @@ function corregirVenta(fecha) {
     document.getElementById('v-tarjeta').value=r.tarjeta||'';
     document.getElementById('v-transfer').value=r.transferencia||'';
     document.getElementById('v-rappi').value=r.rappi||'';
-    document.getElementById('vw-status1').textContent='Editando '+labelFecha(fecha);
-    document.getElementById('vw-status1').className='status';
-  },100);
+    const st=document.getElementById('vw-status1');
+    st.textContent='✏️ Editando registro del '+labelFecha(fecha)+' — los datos se sobreescribirán al guardar.';
+    st.className='status';
+    // Scroll al inicio
+    const header=document.querySelector('#ventas-screen .mod-header');
+    if(header)header.scrollIntoView({behavior:'smooth',block:'start'});
+  },350);
 }
 
 function renderResumenV() {
