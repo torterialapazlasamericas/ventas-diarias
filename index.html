@@ -863,7 +863,7 @@ tbody tr{animation:fadeIn .2s ease;}
 
 <script>
 const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbykcDiW-bCujg7gXUJciqLw_YkEADDF6QGLpV1PX3ZgeiPI9YGBHbqROIGoqzytNXU/exec";
-const INV_URL     = "https://script.google.com/macros/s/AKfycbzF7weUcMGECFF9IpAjRf_qDHY2IeofIroW14Y-SEVSxXTbjSaWmNUrMC_giUGUXYUH/exec";
+const INV_URL     = "https://script.google.com/macros/s/AKfycbx23jamu-2U_pKC5pPlTPW-TiJ34JnBWnlfx_5bY_oPx_v6ieqWB3_pJH2t3ZEAvZbr/exec";
 const GOOGLE_CLIENT_ID = "280797416294-m1q3nggftt0cpa06ljilpmmcu6gv967g.apps.googleusercontent.com";
 
 let ventasRows = [], gastosRows = [];
@@ -1144,11 +1144,11 @@ async function vwGuardar() {
     if (!j.ok){st.textContent='Error: '+j.error;st.className='status error';return;}
     if (propinas>0){const pp=new URLSearchParams({accion:'agregarGasto',fecha,nombre:'Propinas',formaPago:'Efectivo',cantidad:propinas,nota:'Desde registro de ventas',usuario:usuarioActual?usuarioActual.usuario:''});await fetch(SCRIPT_URL+'?'+pp);}
     if (envio>0){const pe=new URLSearchParams({accion:'agregarGasto',fecha,nombre:'Envío a domicilio',formaPago:'Efectivo',cantidad:envio,nota:'Desde registro de ventas',usuario:usuarioActual?usuarioActual.usuario:''});await fetch(SCRIPT_URL+'?'+pe);}
-    if (productosUsados.length>0 || _vwModoEdicion) {
-      st.textContent='Guardando consumo en inventario...';
-      const now=new Date();
+    if (productosUsados.length > 0 || _vwModoEdicion) {
+      st.textContent = 'Guardando consumo en inventario...';
+      const now = new Date();
 
-      // ── Agrupar nuevos consumos (USO + CENA) por insumo ──
+      // Agrupar USO + CENA por insumo (sumar si el mismo insumo aparece en ambas columnas)
       const mapaConsumo = {};
       for (const p of productosUsados) {
         const key = (p.insumo || p.nombre).toLowerCase();
@@ -1159,66 +1159,30 @@ async function vwGuardar() {
         mapaConsumo[key].notas.push(p.nota + ' (' + p.cantidad + ')');
       }
 
-      // ── En modo edición: calcular movimientos ANTERIORES de esa fecha ──
-      // para revertirlos y aplicar solo el neto
-      let productosAnteriores = {};
-      if (_vwModoEdicion && _vwFechaEditando) {
-        // Buscar en invMovs los movimientos de consumo de venta de esa fecha
-        const movsAnteriores = invMovs.filter(m =>
-          m.fecha === _vwFechaEditando &&
-          m.tipo  === 'uso' &&
-          (m.nota||'').toLowerCase().includes('registro de ventas')
-        );
-        for (const m of movsAnteriores) {
-          const key = m.insumoNombre.toLowerCase();
-          productosAnteriores[key] = (productosAnteriores[key]||0) + Number(m.cantidad);
-        }
-      }
+      const productosNuevos = Object.values(mapaConsumo).map(p => ({
+        insumoNombre: p.insumoNombre,
+        cantidad:     p.cantidad,
+        nota:         p.notas.join(' | ')
+      }));
 
-      // ── Calcular delta: nuevo - anterior ──
-      // Si no hay anterior, delta = nuevo (primer registro)
-      // Agrupar todos los insumos afectados (nuevos + anteriores)
-      const todosKeys = new Set([
-        ...Object.keys(mapaConsumo),
-        ...Object.keys(productosAnteriores)
-      ]);
-
-      const productosNeto = [];
-      for (const key of todosKeys) {
-        const nuevo    = mapaConsumo[key]?.cantidad || 0;
-        const anterior = productosAnteriores[key]   || 0;
-        const delta    = nuevo - anterior; // positivo=descontar más, negativo=devolver
-        if (delta === 0) continue; // sin cambio, no hacer nada
-
-        const insumoNombre = mapaConsumo[key]?.insumoNombre || key;
-        const notas = mapaConsumo[key]?.notas || [];
-        let nota = notas.join(' | ') || 'Uso desde registro de ventas';
-        if (_vwModoEdicion) {
-          nota = delta > 0
-            ? 'Corrección: descuento adicional desde registro de ventas'
-            : 'Corrección: devolución a inventario desde registro de ventas';
-        }
-
-        productosNeto.push({ insumoNombre, cantidad: delta, nota });
-      }
-
-      if (productosNeto.length > 0) {
-        const payloadConsumo = {
-          action:    'registrarConsumoVentaNeto',
-          fecha:     fecha,
-          hora:      now.toTimeString().slice(0,5),
-          timestamp: now.toISOString(),
-          usuario:   usuarioActual ? usuarioActual.usuario : '',
-          rol:       usuarioActual ? usuarioActual.perfil  : '',
-          productos: productosNeto,
-          esCorreccion: _vwModoEdicion
-        };
-        await fetch(INV_URL, {
-          method:  'POST',
-          headers: {'Content-Type':'text/plain'},
-          body:    JSON.stringify(payloadConsumo)
-        });
-      }
+      // El Apps Script calcula el delta comparando con movimientos anteriores
+      // de la misma fecha en la hoja de movimientos
+      const payload = {
+        action:       'registrarConsumoVenta',
+        fecha:        fecha,
+        hora:         now.toTimeString().slice(0,5),
+        timestamp:    now.toISOString(),
+        usuario:      usuarioActual ? usuarioActual.usuario : '',
+        rol:          usuarioActual ? usuarioActual.perfil  : '',
+        esCorreccion: _vwModoEdicion,
+        fechaOriginal: _vwFechaEditando || fecha,
+        productos:    productosNuevos
+      };
+      await fetch(INV_URL, {
+        method:  'POST',
+        headers: {'Content-Type': 'text/plain'},
+        body:    JSON.stringify(payload)
+      });
     }
     if (vwFotoData){st.textContent='📷 Subiendo foto...';await subirFoto(vwFotoData,fecha,'ventas',fecha,st,usuarioActual);}
     st.textContent='✅ Venta guardada correctamente.'; st.className='status';
