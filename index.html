@@ -863,7 +863,7 @@ tbody tr{animation:fadeIn .2s ease;}
 
 <script>
 const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbykcDiW-bCujg7gXUJciqLw_YkEADDF6QGLpV1PX3ZgeiPI9YGBHbqROIGoqzytNXU/exec";
-const INV_URL     = "https://script.google.com/macros/s/AKfycbwF3sHrXuDW3tpdi7VT6cx0vrJGN3VG5X7mrpcvLQ5SLv3BPxKwECv4u3BYYBySF64f/exec";
+const INV_URL     = "https://script.google.com/macros/s/AKfycbwgxFD3MfD-If3Q0la6gfhz3h0GRta_jGvziDKWShUSGtm_3FKjZ0zOiK3sHHuxm-0/exec";
 const GOOGLE_CLIENT_ID = "280797416294-m1q3nggftt0cpa06ljilpmmcu6gv967g.apps.googleusercontent.com";
 
 let ventasRows = [], gastosRows = [];
@@ -1145,20 +1145,18 @@ async function vwGuardar() {
     if (productosUsados.length>0){
       st.textContent='Guardando consumo en inventario...';
       for(const prod of productosUsados){
-        // Buscar por insumo mapeado primero, luego por nombre del label
+        // Buscar insumo por nombre mapeado primero, luego por label
         const ins=invInsumos.find(i=>i.nombre.toLowerCase()===(prod.insumo||prod.nombre).toLowerCase())
                 ||invInsumos.find(i=>i.nombre.toLowerCase()===prod.nombre.toLowerCase());
-        if(!ins)continue;
+        if(!ins){console.warn('Insumo no encontrado:',prod.insumo||prod.nombre);continue;}
         const now=new Date();
         const mov={id:'S'+now.getTime()+Math.random().toString(36).slice(2,5),tipo:'uso',fecha,hora:now.toTimeString().slice(0,5),timestamp:now.toISOString(),usuario:usuarioActual?usuarioActual.usuario:'',rol:usuarioActual?usuarioActual.perfil:'',insumoNombre:ins.nombre,unidad:ins.unidad,cantidad:prod.cantidad,costo:null,nota:prod.nota||'Consumo venta del día'};
-        const ppu=parseInt(ins.piezasPorUnidad)||0;
-        const delta=ppu>0?prod.cantidad/ppu:prod.cantidad;
-        const newStock=Math.max(0,+(ins.stock-delta).toFixed(4));
-        const newSPE=ppu>0?Math.round(newStock*ppu):newStock;
-        invInsumos=invInsumos.map(i=>i.id==ins.id?{...i,stock:newStock,stockEnPiezas:newSPE}:i);
-        await fetch(INV_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'addMovimiento',data:mov})});
+        // ✅ Solo registrar el movimiento — el descuento en stockEnPiezas lo hace el Apps Script
+        // NUNCA llamar saveInsumos desde aquí para no borrar la hoja de insumos
+        await fetch(INV_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+          body:JSON.stringify({action:'addMovimientoYDescontar',data:mov,insumoId:ins.id,cantidad:prod.cantidad})
+        });
       }
-      await fetch(INV_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'saveInsumos',data:invInsumos})});
     }
     if (vwFotoData){st.textContent='📷 Subiendo foto...';await subirFoto(vwFotoData,fecha,'ventas',fecha,st,usuarioActual);}
     st.textContent='✅ Venta guardada correctamente.'; st.className='status';
