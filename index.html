@@ -1126,12 +1126,12 @@ async function vwGuardar() {
   const productosUso = VW_PRODUCTOS.map(p=>({
     nombre: p.label, insumo: p.insumo, id: p.id,
     cantidad: parseFloat(document.getElementById('vwp_uso_'+p.id)?.value)||0,
-    nota: 'Consumo venta del día'
+    nota: 'Uso desde registro de ventas'
   })).filter(p=>p.cantidad>0);
   const productosCena = VW_PRODUCTOS.map(p=>({
     nombre: p.label, insumo: p.insumo, id: p.id,
     cantidad: parseFloat(document.getElementById('vwp_cena_'+p.id)?.value)||0,
-    nota: 'Cena o cortesía'
+    nota: 'Cena/cortesia desde registro de ventas'
   })).filter(p=>p.cantidad>0);
   const productosUsados = [...productosUso, ...productosCena];
   st.textContent='Guardando venta...'; st.className='status';
@@ -1147,6 +1147,27 @@ async function vwGuardar() {
       const now=new Date();
       // El Apps Script busca los insumos por nombre directamente en el Sheet
       // No dependemos de invInsumos local (puede estar vacío si no se visitó inventario)
+      // Agrupar USO y CENA por insumo para evitar doble descuento simultáneo
+      // Si el mismo insumo tiene cantidad en ambas columnas, se suman en un solo producto
+      const mapaConsumo = {};
+      for (const p of productosUsados) {
+        const key = (p.insumo || p.nombre).toLowerCase();
+        if (!mapaConsumo[key]) {
+          mapaConsumo[key] = {
+            insumoNombre: p.insumo || p.nombre,
+            cantidad: 0,
+            notas: []
+          };
+        }
+        mapaConsumo[key].cantidad += p.cantidad;
+        mapaConsumo[key].notas.push(p.nota + ' (' + p.cantidad + ')');
+      }
+      const productosAgrupados = Object.values(mapaConsumo).map(p => ({
+        insumoNombre: p.insumoNombre,
+        cantidad:     p.cantidad,
+        nota:         p.notas.join(' | ')
+      }));
+
       const payloadConsumo = {
         action:    'registrarConsumoVenta',
         fecha:     fecha,
@@ -1154,11 +1175,7 @@ async function vwGuardar() {
         timestamp: now.toISOString(),
         usuario:   usuarioActual ? usuarioActual.usuario : '',
         rol:       usuarioActual ? usuarioActual.perfil  : '',
-        productos: productosUsados.map(p => ({
-          insumoNombre: p.insumo || p.nombre,
-          cantidad:     p.cantidad,
-          nota:         'Desde registro de ventas'
-        }))
+        productos: productosAgrupados
       };
       await fetch(INV_URL, {
         method:  'POST',
