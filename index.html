@@ -863,7 +863,7 @@ tbody tr{animation:fadeIn .2s ease;}
 
 <script>
 const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbykcDiW-bCujg7gXUJciqLw_YkEADDF6QGLpV1PX3ZgeiPI9YGBHbqROIGoqzytNXU/exec";
-const INV_URL     = "https://script.google.com/macros/s/AKfycbyRMzDwQlvm41QZspIXQmVkQYsovxDvGCe37LvEBP-ez7Iwv1P1PKAXKAVu8_1_hcES/exec";
+const INV_URL     = "https://script.google.com/macros/s/AKfycbwK_UjW34Iv7FjdMtr-oEeTrJsLtlrkNsy9l12ayKLX-4XsB6YVK3_q9S4xS10qzl1b/exec";
 const GOOGLE_CLIENT_ID = "280797416294-m1q3nggftt0cpa06ljilpmmcu6gv967g.apps.googleusercontent.com";
 
 let ventasRows = [], gastosRows = [];
@@ -1144,19 +1144,27 @@ async function vwGuardar() {
     if (envio>0){const pe=new URLSearchParams({accion:'agregarGasto',fecha,nombre:'Envío a domicilio',formaPago:'Efectivo',cantidad:envio,nota:'Desde registro de ventas',usuario:usuarioActual?usuarioActual.usuario:''});await fetch(SCRIPT_URL+'?'+pe);}
     if (productosUsados.length>0){
       st.textContent='Guardando consumo en inventario...';
-      for(const prod of productosUsados){
-        // Buscar insumo por nombre mapeado primero, luego por label
-        const ins=invInsumos.find(i=>i.nombre.toLowerCase()===(prod.insumo||prod.nombre).toLowerCase())
-                ||invInsumos.find(i=>i.nombre.toLowerCase()===prod.nombre.toLowerCase());
-        if(!ins){console.warn('Insumo no encontrado:',prod.insumo||prod.nombre);continue;}
-        const now=new Date();
-        const mov={id:'S'+now.getTime()+Math.random().toString(36).slice(2,5),tipo:'uso',fecha,hora:now.toTimeString().slice(0,5),timestamp:now.toISOString(),usuario:usuarioActual?usuarioActual.usuario:'',rol:usuarioActual?usuarioActual.perfil:'',insumoNombre:ins.nombre,unidad:ins.unidad,cantidad:prod.cantidad,costo:null,nota:prod.nota||'Consumo venta del día'};
-        // ✅ Solo registrar el movimiento — el descuento en stockEnPiezas lo hace el Apps Script
-        // NUNCA llamar saveInsumos desde aquí para no borrar la hoja de insumos
-        await fetch(INV_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
-          body:JSON.stringify({action:'addMovimientoYDescontar',data:mov,insumoId:ins.id,cantidad:prod.cantidad})
-        });
-      }
+      const now=new Date();
+      // El Apps Script busca los insumos por nombre directamente en el Sheet
+      // No dependemos de invInsumos local (puede estar vacío si no se visitó inventario)
+      const payloadConsumo = {
+        action:    'registrarConsumoVenta',
+        fecha:     fecha,
+        hora:      now.toTimeString().slice(0,5),
+        timestamp: now.toISOString(),
+        usuario:   usuarioActual ? usuarioActual.usuario : '',
+        rol:       usuarioActual ? usuarioActual.perfil  : '',
+        productos: productosUsados.map(p => ({
+          insumoNombre: p.insumo || p.nombre,
+          cantidad:     p.cantidad,
+          nota:         'Desde registro de ventas'
+        }))
+      };
+      await fetch(INV_URL, {
+        method:  'POST',
+        headers: {'Content-Type':'text/plain'},
+        body:    JSON.stringify(payloadConsumo)
+      });
     }
     if (vwFotoData){st.textContent='📷 Subiendo foto...';await subirFoto(vwFotoData,fecha,'ventas',fecha,st,usuarioActual);}
     st.textContent='✅ Venta guardada correctamente.'; st.className='status';
