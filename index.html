@@ -866,7 +866,7 @@ tbody tr{animation:fadeIn .2s ease;}
 
 <script>
 const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbykcDiW-bCujg7gXUJciqLw_YkEADDF6QGLpV1PX3ZgeiPI9YGBHbqROIGoqzytNXU/exec";
-const INV_URL     = "https://script.google.com/macros/s/AKfycbx23jamu-2U_pKC5pPlTPW-TiJ34JnBWnlfx_5bY_oPx_v6ieqWB3_pJH2t3ZEAvZbr/exec";
+const INV_URL     = "https://script.google.com/macros/s/AKfycbwIXeeShQGBtcWJRYpAMsAkJRh3ozkvBWAC13a8aNMRgrjdAjbaj0H0kGTZhwzxVGBe/exec";
 const GOOGLE_CLIENT_ID = "280797416294-m1q3nggftt0cpa06ljilpmmcu6gv967g.apps.googleusercontent.com";
 
 let ventasRows = [], gastosRows = [];
@@ -990,16 +990,18 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelect
 
 // ══════════════ WIZARD VENTAS ══════════════════════════════
 // Productos con mapeo a insumos del inventario
+// descontarStockF:true = descuenta columna F (stock) Y columna I (stockEnPiezas)
+// sin esa propiedad   = solo descuenta columna I (stockEnPiezas)
 const VW_PRODUCTOS = [
-  { label: 'Pan tradicional',     insumo: 'Pan tradicional',          id: 'pan_trad' },
-  { label: 'Pan mac',             insumo: 'Pan mac',                  id: 'pan_mac' },
-  { label: 'Refrescos',           insumo: 'COCA COLA REGULAR 12OZ',   id: 'refrescos' },
-  { label: 'Lechitas',            insumo: 'LECHITA 500ML',            id: 'lechitas' },
-  { label: 'Jamaicas',            insumo: 'AGUA DE JAMAICA',          id: 'jamaicas' },
-  { label: 'Refresco desechable', insumo: 'COCA COLA 500ml DESECHABLE',id: 'refr_des' },
-  { label: 'Agua',                insumo: 'AGUA NATURAL 500ML',       id: 'agua' },
-  { label: 'Agua mineral',        insumo: 'AGUA MINERAL 500ML',       id: 'agua_min' },
-  { label: 'Coca cola sin azúcar',insumo: 'COCA COLA SIN AZUCAR 500ML',id: 'coca_sin' }
+  { label: 'Pan tradicional',     insumo: 'Pan tradicional',           id: 'pan_trad',  descontarStockF: true },
+  { label: 'Pan mac',             insumo: 'Pan mac',                   id: 'pan_mac',   descontarStockF: true },
+  { label: 'Refrescos',           insumo: 'COCA COLA REGULAR 12OZ',    id: 'refrescos'  },
+  { label: 'Lechitas',            insumo: 'LECHITA 500ML',             id: 'lechitas',  descontarStockF: true },
+  { label: 'Jamaicas',            insumo: 'AGUA DE JAMAICA',           id: 'jamaicas',  descontarStockF: true },
+  { label: 'Refresco desechable', insumo: 'COCA COLA 500ml DESECHABLE',id: 'refr_des',  descontarStockF: true },
+  { label: 'Agua',                insumo: 'AGUA NATURAL 500ML',        id: 'agua',      descontarStockF: true },
+  { label: 'Agua mineral',        insumo: 'AGUA MINERAL 500ML',        id: 'agua_min',  descontarStockF: true },
+  { label: 'Coca cola sin azúcar',insumo: 'COCA COLA SIN AZUCAR 500ML',id: 'coca_sin'  }
 ];
 let vwFotoData=null, _vwPasoActual=1, _vwModoEdicion=false, _vwFechaEditando=null;
 
@@ -1136,18 +1138,20 @@ async function vwGuardar() {
   // Leer USO y CENA por separado
   // Paso 3: Cena/Cortesías
   const productosCena = VW_PRODUCTOS.map(p=>({
-    insumo:   p.insumo,
-    nombre:   p.label,
-    cantidad: parseFloat(document.getElementById('vwp_cena_'+p.id)?.value)||0,
-    nota:     'Cena/cortesia desde registro de ventas'
+    insumo:          p.insumo,
+    nombre:          p.label,
+    cantidad:        parseFloat(document.getElementById('vwp_cena_'+p.id)?.value)||0,
+    nota:            'Cena/cortesia desde registro de ventas',
+    descontarStockF: p.descontarStockF || false
   })).filter(p=>p.cantidad>0);
 
   // Paso 4: Vendidos
   const productosVendidos = VW_PRODUCTOS.map(p=>({
-    insumo:   p.insumo,
-    nombre:   p.label,
-    cantidad: parseFloat(document.getElementById('vwp_uso_'+p.id)?.value)||0,
-    nota:     'Vendido desde registro de ventas'
+    insumo:          p.insumo,
+    nombre:          p.label,
+    cantidad:        parseFloat(document.getElementById('vwp_uso_'+p.id)?.value)||0,
+    nota:            'Vendido desde registro de ventas',
+    descontarStockF: p.descontarStockF || false
   })).filter(p=>p.cantidad>0);
 
   // Juntar para el inventario: cena + vendidos por insumo
@@ -1169,16 +1173,23 @@ async function vwGuardar() {
       for (const p of productosUsados) {
         const key = (p.insumo || p.nombre).toLowerCase();
         if (!mapaConsumo[key]) {
-          mapaConsumo[key] = { insumoNombre: p.insumo || p.nombre, cantidad: 0, notas: [] };
+          mapaConsumo[key] = {
+            insumoNombre:    p.insumo || p.nombre,
+            cantidad:        0,
+            notas:           [],
+            descontarStockF: p.descontarStockF || false
+          };
         }
-        mapaConsumo[key].cantidad += p.cantidad;
+        mapaConsumo[key].cantidad        += p.cantidad;
+        mapaConsumo[key].descontarStockF  = mapaConsumo[key].descontarStockF || p.descontarStockF || false;
         mapaConsumo[key].notas.push(p.nota + ' (' + p.cantidad + ')');
       }
 
       const productosNuevos = Object.values(mapaConsumo).map(p => ({
-        insumoNombre: p.insumoNombre,
-        cantidad:     p.cantidad,
-        nota:         p.notas.join(' | ')
+        insumoNombre:    p.insumoNombre,
+        cantidad:        p.cantidad,
+        nota:            p.notas.join(' | '),
+        descontarStockF: p.descontarStockF || false
       }));
 
       // El Apps Script calcula el delta comparando con movimientos anteriores
@@ -1688,13 +1699,48 @@ async function invDoRegistrar(){
   const now=new Date();
   const mov={id:invTipoActual[0].toUpperCase()+now.getTime(),tipo:invTipoActual,fecha:now.toISOString().slice(0,10),hora:now.toTimeString().slice(0,5),timestamp:now.toISOString(),usuario:usuarioActual?usuarioActual.usuario:'',rol:usuarioActual?usuarioActual.perfil:'',insumoNombre:ins.nombre,unidad:unidMov,cantidad:cantMov,costo:invTipoActual==='entrada'?costo:null,nota};
   try{
-    const newStock=invTipoActual==='entrada'?+(ins.stock+deltaUnidades).toFixed(4):+(ins.stock-deltaUnidades).toFixed(4);
-    const newPrecio=(invTipoActual==='entrada'&&costo&&costo>0)?+costo.toFixed(2):ins.precio;
-    const newSPE=ppu>0?Math.round(newStock*ppu):newStock;
+    // Calcular nuevos valores de stock
+    const newStock  = invTipoActual==='entrada'
+      ? +(ins.stock + deltaUnidades).toFixed(4)
+      : Math.max(0, +(ins.stock - deltaUnidades).toFixed(4));
+    const newPrecio = (invTipoActual==='entrada' && costo && costo>0) ? +costo.toFixed(2) : ins.precio;
+
+    // Calcular stockEnPiezas correctamente según el tipo de movimiento:
+    // - Si movimiento en PIEZAS: descontar/sumar directamente de stockEnPiezas
+    // - Si movimiento en UNIDADES y ppu>0: recalcular desde newStock * ppu
+    // - Si ppu=0 (no tiene paquetes como pan): stockEnPiezas = newStock (son lo mismo)
+    let newSPE;
+    if (unidMov === 'pieza') {
+      // Movimiento por pieza: SPE cambia exactamente la cantidad de piezas
+      newSPE = invTipoActual==='entrada'
+        ? ins.stockEnPiezas + cantMov
+        : Math.max(0, ins.stockEnPiezas - cantMov);
+    } else if (ppu > 0) {
+      // Movimiento por unidad/paquete: recalcular SPE desde newStock
+      newSPE = Math.round(newStock * ppu);
+    } else {
+      // Sin piezas por unidad (ej. pan): SPE = stock (son lo mismo)
+      newSPE = newStock;
+    }
+
     invInsumos=invInsumos.map(i=>i.id==ins.id?{...i,stock:newStock,precio:newPrecio,stockEnPiezas:newSPE}:i);
     invMovs.unshift(mov);
-    await Promise.all([fetch(INV_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'saveInsumos',data:invInsumos})}),fetch(INV_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'addMovimiento',data:mov})})]);
-    st.textContent=(invTipoActual==='entrada'?'✅ +':'✅ -')+cant+' '+unidMov+' de '+ins.nombre;st.className='status';
+
+    // Guardar en el servidor: movimiento + actualizar solo las celdas del insumo
+    await fetch(INV_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({
+        action:       'movimientoDirecto',
+        mov:          mov,
+        insumoId:     ins.id,
+        insumoNombre: ins.nombre,
+        newStock:     newStock,
+        newSPE:       newSPE,
+        newPrecio:    newPrecio
+      })
+    });
+
+    st.textContent=(invTipoActual==='entrada'?'✅ +':'✅ -')+cant+' '+unidMov+' de '+ins.nombre;
+    st.className='status';
     invLimpiarInsumo();invRenderUltimos();
   }catch(e){st.textContent='⚠️ Error: '+e.message;st.className='status error';}
 }
