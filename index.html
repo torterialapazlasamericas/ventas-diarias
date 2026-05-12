@@ -445,15 +445,14 @@ tbody tr{animation:fadeIn .2s ease;}
       <div class="resumen-body">
         <div class="resumen-grid">
           <div class="rmetric"><div class="rl">Efectivo</div><div class="rv" id="rv-ef"></div></div>
-          <div class="rmetric"><div class="rl">Tarjeta s/com.</div><div class="rv" id="rv-tj"></div></div>
-          <div class="rmetric"><div class="rl">Tarjeta c/com.</div><div class="rv" id="rv-tcon"></div></div>
           <div class="rmetric"><div class="rl">Transferencia</div><div class="rv" id="rv-tr"></div></div>
-          <div class="rmetric"><div class="rl">Rappi s/com.</div><div class="rv" id="rv-rsin"></div></div>
-          <div class="rmetric"><div class="rl">Rappi c/com.</div><div class="rv" id="rv-rcon"></div></div>
-          <div class="rmetric"><div class="rl">Tarjeta s/com (tot)</div><div class="rv" id="rv-tsin"></div></div>
-          <div class="rmetric"><div class="rl">Total sin comisión</div><div class="rv" id="rv-sc"></div></div>
-          <div class="rmetric"><div class="rl">Total con comisión</div><div class="rv green" id="rv-j"></div></div>
-          <div class="rmetric"><div class="rl">Promedio diario</div><div class="rv" id="rv-prom"></div></div>
+          <div class="rmetric"><div class="rl">Tarjeta s/comisión</div><div class="rv" id="rv-tj"></div></div>
+          <div class="rmetric"><div class="rl">Tarjeta c/comisión</div><div class="rv" id="rv-tcon"></div></div>
+          <div class="rmetric"><div class="rl">Rappi s/comisión</div><div class="rv" id="rv-rsin"></div></div>
+          <div class="rmetric"><div class="rl">Rappi c/comisión</div><div class="rv" id="rv-rcon"></div></div>
+          <div class="rmetric"><div class="rl">Venta total s/comisión</div><div class="rv" id="rv-sc"></div></div>
+          <div class="rmetric"><div class="rl">Venta total c/comisión</div><div class="rv green" id="rv-j"></div></div>
+          <div class="rmetric" style="grid-column:1/-1"><div class="rl">Promedio diario</div><div class="rv" id="rv-prom"></div></div>
         </div>
       </div>
     </div>
@@ -743,7 +742,7 @@ tbody tr{animation:fadeIn .2s ease;}
           </div>
           <div id="inv-costo-section" class="field">
             <label>Precio por unidad (opcional)</label>
-            <input type="text" inputmode="decimal" id="inv-f-costo" placeholder="0.00" autocomplete="off"/>
+            <input type="text" inputmode="decimal" id="inv-f-costo" placeholder="0" inputmode="numeric" autocomplete="off"/>
           </div>
           <div class="field">
             <label>Nota / Proveedor (opcional)</label>
@@ -824,7 +823,7 @@ tbody tr{animation:fadeIn .2s ease;}
               </div>
               <div class="field"><label>Stock inicial</label><input type="text" inputmode="decimal" id="inv-n-stock" placeholder="0" autocomplete="off"/></div>
             </div>
-            <div class="field"><label>Precio unitario ($)</label><input type="text" inputmode="decimal" id="inv-n-precio" placeholder="0.00" autocomplete="off"/></div>
+            <div class="field"><label>Precio unitario ($)</label><input type="text" inputmode="decimal" id="inv-n-precio" placeholder="0" inputmode="numeric" autocomplete="off"/></div>
             <div class="field">
               <label>Área de uso</label>
               <select id="inv-n-categoria" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg)">
@@ -866,7 +865,7 @@ tbody tr{animation:fadeIn .2s ease;}
 
 <script>
 const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbykcDiW-bCujg7gXUJciqLw_YkEADDF6QGLpV1PX3ZgeiPI9YGBHbqROIGoqzytNXU/exec";
-const INV_URL     = "https://script.google.com/macros/s/AKfycbwIXeeShQGBtcWJRYpAMsAkJRh3ozkvBWAC13a8aNMRgrjdAjbaj0H0kGTZhwzxVGBe/exec";
+const INV_URL     = "https://script.google.com/macros/s/AKfycby2QTe92JmSBobL2zfppdWXGWiER3PzoY9IKzXm7jURDA8rAobbK3IuK-Md-tVeF6xb/exec";
 const GOOGLE_CLIENT_ID = "280797416294-m1q3nggftt0cpa06ljilpmmcu6gv967g.apps.googleusercontent.com";
 
 let ventasRows = [], gastosRows = [];
@@ -917,6 +916,14 @@ function cerrarSesion() {
 function irA(screenId) {
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('activo'));
   document.getElementById(screenId).classList.add('activo');
+  if (screenId==='pin-screen') {
+    // Limpiar PIN completamente al entrar
+    pinActual = '';
+    pintarDots(false);
+    document.getElementById('pin-msg').textContent = '';
+    // Quitar foco de cualquier botón para evitar dígitos fantasma en móvil
+    setTimeout(() => { if (document.activeElement) document.activeElement.blur(); }, 100);
+  }
   if (screenId==='menu-screen')     aplicarPermisos();
   if (screenId==='ventas-screen')   iniciarVentas();
   if (screenId==='gastos-screen')   iniciarGastos();
@@ -1577,15 +1584,26 @@ function invStockInfo(ins){
 }
 async function iniciarInventario(){
   setInvTab('registrar');
-  const el=document.getElementById('inv-fecha-hdr');if(el)el.textContent=new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
+  const el=document.getElementById('inv-fecha-hdr');
+  if(el)el.textContent=new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
+  const ultimos=document.getElementById('inv-ultimos');
+  if(ultimos)ultimos.innerHTML='<div style="color:var(--muted);font-size:13px;padding:10px 0"><span class="spin"></span> Cargando...</div>';
   await cargarInventario();
 }
 async function cargarInventario(){
   try{
-    const[rI,rM]=await Promise.all([fetch(INV_URL+'?action=getInsumos'),fetch(INV_URL+'?action=getMovimientos')]);
-    const rawI=await rI.json(),rawM=await rM.json();
-    invInsumos=(rawI&&rawI.length)?rawI.map(i=>{const s=toNum(i.stock),ppu=toInt(i.piezasPorUnidad),spe=toNum(i.stockEnPiezas);return{...i,stock:s,precio:toNum(i.precio),piezasPorUnidad:ppu,stockEnPiezas:spe>0?spe:(ppu>0?Math.round(s*ppu):s),grupo:i.grupo||'Otros',categoria:i.categoria||'ambos'};}):[];
-    invMovs=(rawM&&rawM.length)?[...rawM].reverse():[];
+    // Una sola llamada que devuelve insumos + movimientos juntos
+    const r    = await fetch(INV_URL+'?action=getTodo');
+    const data = await r.json();
+    const rawI = data.insumos     || [];
+    const rawM = data.movimientos || [];
+    invInsumos = rawI.length ? rawI.map(i=>{
+      const s=toNum(i.stock),ppu=toInt(i.piezasPorUnidad),spe=toNum(i.stockEnPiezas);
+      return{...i,stock:s,precio:toNum(i.precio),piezasPorUnidad:ppu,
+        stockEnPiezas:spe>0?spe:(ppu>0?Math.round(s*ppu):s),
+        grupo:i.grupo||'Otros',categoria:i.categoria||'ambos'};
+    }) : [];
+    invMovs = rawM.length ? [...rawM].reverse() : [];
     invPoblarFiltros();invRenderUltimos();
   }catch(e){console.error('Error inventario:',e.message);}
 }
