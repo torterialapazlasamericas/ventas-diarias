@@ -884,7 +884,7 @@ tbody tr{animation:fadeIn .2s ease;}
 
 <script>
 const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbykcDiW-bCujg7gXUJciqLw_YkEADDF6QGLpV1PX3ZgeiPI9YGBHbqROIGoqzytNXU/exec";
-const INV_URL     = "https://script.google.com/macros/s/AKfycby2QTe92JmSBobL2zfppdWXGWiER3PzoY9IKzXm7jURDA8rAobbK3IuK-Md-tVeF6xb/exec";
+const INV_URL     = "https://script.google.com/macros/s/AKfycbwBpq23ZxdggK9O59Rlo5oLMtNSpJ1-jPmkPmGqoBbqCOFd_bjAll_k40tyXQChRNvk/exec";
 const GOOGLE_CLIENT_ID = "280797416294-m1q3nggftt0cpa06ljilpmmcu6gv967g.apps.googleusercontent.com";
 
 let ventasRows = [], gastosRows = [];
@@ -1784,20 +1784,32 @@ async function invDoRegistrar(){
     if(!INSUMOS_CAJA_ENTRADA.some(x=>nomLow.includes(x))){
       st.textContent='⛔ Solo puedes registrar Pan tradicional y Pan mac.';st.className='status error';return;
     }
-    // Verificar que no haya entrado este insumo hoy
-    const hoyStr=new Date().toISOString().slice(0,10);
-    const yaEntro=invMovs.some(m=>
-      m.tipo==='entrada'&&
-      m.fecha===hoyStr&&
-      m.insumoNombre.toLowerCase()===nomLow&&
-      (m.nota||'').toLowerCase().includes('bodega')||
-      (m.usuario||'')===(usuarioActual?.usuario||'')&&
-      m.tipo==='entrada'&&m.fecha===hoyStr&&m.insumoNombre.toLowerCase()===nomLow
-    );
-    if(yaEntro){
-      st.textContent='⛔ Ya registraste una entrada de '+ins.nombre+' hoy. No puedes registrar más.';
-      st.className='status error';return;
+    // Verificar en el Apps Script directamente (lee el sheet real)
+    // Más confiable que el array local que puede estar desactualizado
+    const hoyStr = dateToIso(new Date());
+    st.textContent = 'Verificando...'; st.className = 'status';
+    try {
+      const chk = await fetch(INV_URL, {
+        method: 'POST',
+        headers: {'Content-Type':'text/plain'},
+        body: JSON.stringify({
+          action:       'verificarEntradaHoy',
+          insumoNombre: ins.nombre,
+          fecha:        hoyStr,
+          usuario:      usuarioActual ? usuarioActual.usuario : '',
+          rol:          perfilEfectivo()
+        })
+      });
+      const chkData = await chk.json();
+      if (chkData.yaExiste) {
+        st.textContent = '⛔ Ya registraste una entrada de '+ins.nombre+' hoy. No tienes permiso para registrar más veces este insumo.';
+        st.className = 'status error'; return;
+      }
+    } catch(e) {
+      // Si falla la verificación, continuar (no bloquear por error de red)
+      console.warn('No se pudo verificar entrada previa:', e.message);
     }
+    st.textContent = '';
   }
   if(ins){
     const cat=(ins.categoria||'ambos').toLowerCase();
