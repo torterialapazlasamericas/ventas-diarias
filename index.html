@@ -884,7 +884,7 @@ tbody tr{animation:fadeIn .2s ease;}
 
 <script>
 const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbykcDiW-bCujg7gXUJciqLw_YkEADDF6QGLpV1PX3ZgeiPI9YGBHbqROIGoqzytNXU/exec";
-const INV_URL     = "https://script.google.com/macros/s/AKfycbwBpq23ZxdggK9O59Rlo5oLMtNSpJ1-jPmkPmGqoBbqCOFd_bjAll_k40tyXQChRNvk/exec";
+const INV_URL     = "https://script.google.com/macros/s/AKfycbzP7IgfRbovnpElJKXOfKpHhnMZbzJK94--H28uxBdF0qIQffH97uoeIONq44_ibzwx/exec";
 const GOOGLE_CLIENT_ID = "280797416294-m1q3nggftt0cpa06ljilpmmcu6gv967g.apps.googleusercontent.com";
 
 let ventasRows = [], gastosRows = [];
@@ -1048,6 +1048,9 @@ const VW_PRODUCTOS = [
   { label: 'Coca cola sin azúcar',insumo: 'COCA COLA SIN AZUCAR 500ML',id: 'coca_sin'  }
 ];
 let vwFotoData=null, _vwPasoActual=1, _vwModoEdicion=false, _vwFechaEditando=null;
+// Registro local de entradas del día para perfil Caja/Ambos→caja
+// { 'pan tradicional': '2026-05-13', 'pan mac': '2026-05-13' }
+const _entradasHoy = {};
 
 function iniciarVentas() {
   _vwPasoActual=0;
@@ -1784,9 +1787,17 @@ async function invDoRegistrar(){
     if(!INSUMOS_CAJA_ENTRADA.some(x=>nomLow.includes(x))){
       st.textContent='⛔ Solo puedes registrar Pan tradicional y Pan mac.';st.className='status error';return;
     }
-    // Verificar en el Apps Script directamente (lee el sheet real)
-    // Más confiable que el array local que puede estar desactualizado
+    // Verificar entrada duplicada para perfil Caja
     const hoyStr = dateToIso(new Date());
+    const _claveEntrada = nomLow + '_' + hoyStr;
+
+    // 1. Verificar en memoria local (inmediato, sin red)
+    if (_entradasHoy[_claveEntrada]) {
+      st.textContent = '⛔ Ya registraste una entrada de '+ins.nombre+' hoy. No tienes permiso para registrar más veces este insumo.';
+      st.className = 'status error'; return;
+    }
+
+    // 2. Verificar en el sheet (por si recargó la página)
     st.textContent = 'Verificando...'; st.className = 'status';
     try {
       const chk = await fetch(INV_URL, {
@@ -1796,17 +1807,17 @@ async function invDoRegistrar(){
           action:       'verificarEntradaHoy',
           insumoNombre: ins.nombre,
           fecha:        hoyStr,
-          usuario:      usuarioActual ? usuarioActual.usuario : '',
-          rol:          perfilEfectivo()
+          usuario:      usuarioActual ? usuarioActual.usuario : ''
         })
       });
       const chkData = await chk.json();
       if (chkData.yaExiste) {
+        // Guardar en memoria local para bloqueos futuros inmediatos
+        _entradasHoy[_claveEntrada] = true;
         st.textContent = '⛔ Ya registraste una entrada de '+ins.nombre+' hoy. No tienes permiso para registrar más veces este insumo.';
         st.className = 'status error'; return;
       }
     } catch(e) {
-      // Si falla la verificación, continuar (no bloquear por error de red)
       console.warn('No se pudo verificar entrada previa:', e.message);
     }
     st.textContent = '';
@@ -1869,6 +1880,11 @@ async function invDoRegistrar(){
 
     st.textContent=(invTipoActual==='entrada'?'✅ +':'✅ -')+cant+' '+unidMov+' de '+ins.nombre;
     st.className='status';
+    // Si era Caja registrando entrada, marcar en memoria local para bloqueo inmediato
+    if (invTipoActual==='entrada' && perfilEfectivo()==='caja') {
+      const _hoy = dateToIso(new Date());
+      _entradasHoy[ins.nombre.toLowerCase()+'_'+_hoy] = true;
+    }
     invLimpiarInsumo();invRenderUltimos();
   }catch(e){st.textContent='⚠️ Error: '+e.message;st.className='status error';}
 }
