@@ -282,6 +282,22 @@ tbody tr{animation:fadeIn .2s ease;}
   </div>
 </div>
 
+<!-- ══ SELECTOR MODO AMBOS ══ -->
+<div id="modo-screen" class="screen">
+  <div class="pin-card" style="max-width:340px">
+    <h2 style="margin-bottom:.5rem">¿Qué actividad realizarás?</h2>
+    <p style="margin-bottom:1.5rem;color:var(--muted);font-size:14px">Selecciona tu rol para esta sesión</p>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <button class="menu-btn" onclick="seleccionarModo('caja')" style="font-size:16px">
+        <span class="micon">💰</span> Caja
+      </button>
+      <button class="menu-btn" onclick="seleccionarModo('cocina')" style="font-size:16px">
+        <span class="micon">👨‍🍳</span> Cocina
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ MENÚ ══ -->
 <div id="menu-screen" class="screen">
   <div class="menu-card">
@@ -450,8 +466,10 @@ tbody tr{animation:fadeIn .2s ease;}
           <div class="rmetric"><div class="rl">Tarjeta c/comisión</div><div class="rv" id="rv-tcon"></div></div>
           <div class="rmetric"><div class="rl">Rappi s/comisión</div><div class="rv" id="rv-rsin"></div></div>
           <div class="rmetric"><div class="rl">Rappi c/comisión</div><div class="rv" id="rv-rcon"></div></div>
-          <div class="rmetric"><div class="rl">Venta total s/comisión</div><div class="rv" id="rv-sc"></div></div>
-          <div class="rmetric"><div class="rl">Venta total c/comisión</div><div class="rv green" id="rv-j"></div></div>
+          <div class="rmetric"><div class="rl">Venta total s/com sin Rappi</div><div class="rv" id="rv-vssin"></div></div>
+          <div class="rmetric"><div class="rl">Venta total s/com con Rappi</div><div class="rv" id="rv-vscon"></div></div>
+          <div class="rmetric"><div class="rl">Venta total c/com sin Rappi</div><div class="rv" id="rv-vcsin"></div></div>
+          <div class="rmetric"><div class="rl">Venta total c/com con Rappi</div><div class="rv green" id="rv-vccon"></div></div>
           <div class="rmetric" style="grid-column:1/-1"><div class="rl">Promedio diario</div><div class="rv" id="rv-prom"></div></div>
         </div>
       </div>
@@ -581,6 +599,7 @@ tbody tr{animation:fadeIn .2s ease;}
     <div class="resumen-card">
       <div class="tabs">
         <button class="tab active" onclick="setTabA('semana')">Esta semana</button>
+        <button class="tab" onclick="setTabA('semana_ant')">Sem. anterior</button>
         <button class="tab" onclick="setTabA('quincena')">Quincena</button>
         <button class="tab" onclick="setTabA('mes')">Este mes</button>
         <button class="tab" onclick="setTabA('custom')">Personalizado</button>
@@ -884,6 +903,7 @@ function inicioSemana(d) { const dia=d.getDay(),diff=(dia===0)?-6:1-dia; const r
 function getRango(tab,desdeId,hastaId) {
   const hoy=hoy0();
   if (tab==='semana') { const desde=inicioSemana(hoy); const hasta=new Date(desde); hasta.setDate(desde.getDate()+6); return {desde,hasta}; }
+  if (tab==='semana_ant') { const ini=inicioSemana(hoy); const hasta=new Date(ini); hasta.setDate(ini.getDate()-1); const desde=new Date(hasta); desde.setDate(hasta.getDate()-6); return {desde,hasta}; }
   if (tab==='quincena') { const d=hoy.getDate(),y=hoy.getFullYear(),m=hoy.getMonth(); return d<=15?{desde:new Date(y,m,1),hasta:new Date(y,m,15)}:{desde:new Date(y,m,16),hasta:new Date(y,m+1,0)}; }
   if (tab==='mes') return {desde:new Date(hoy.getFullYear(),hoy.getMonth(),1),hasta:new Date(hoy.getFullYear(),hoy.getMonth()+1,0)};
   if (tab==='custom') { const desde=isoADate(document.getElementById(desdeId).value); const hasta=isoADate(document.getElementById(hastaId).value); return (desde&&hasta)?{desde,hasta}:null; }
@@ -895,7 +915,7 @@ function fmtPeriodo(desde,hasta) { const M=['ene','feb','mar','abr','may','jun',
 let usuarioActual = null;
 
 function aplicarPermisos() {
-  const perfil = (usuarioActual?usuarioActual.perfil:'').toLowerCase().trim();
+  const perfil = perfilEfectivo();
   const esAdmin=perfil==='admin', esSuper=perfil==='super';
   const esCaja=perfil==='caja', esCocina=perfil==='cocina', esAmbos=perfil==='ambos';
   const s=(id,v)=>{const e=document.getElementById(id);if(e)e.style.display=v;};
@@ -906,6 +926,21 @@ function aplicarPermisos() {
   s('mbtn-inv','flex');
   const rv=document.getElementById('resumen-v'); if(rv) rv.style.display=esCaja?'none':'block';
   const btnCsv=document.getElementById('btn-csv-v'); if(btnCsv) btnCsv.style.display=(esAdmin||esSuper)?'inline-block':'none';
+}
+
+function seleccionarModo(modo) {
+  // modo = 'caja' o 'cocina'
+  // Sobrescribir el perfil efectivo para esta sesión
+  usuarioActual._modoEfectivo = modo;
+  irA('menu-screen');
+}
+
+function perfilEfectivo() {
+  if (!usuarioActual) return '';
+  const p = (usuarioActual.perfil||'').toLowerCase();
+  // Si es ambos y ya eligió modo, usar ese modo
+  if (p === 'ambos' && usuarioActual._modoEfectivo) return usuarioActual._modoEfectivo;
+  return p;
 }
 
 function cerrarSesion() {
@@ -985,8 +1020,10 @@ async function verificarPin() {
     const d=await r.json();
     msg.textContent=''; msg.className='pin-msg';
     if (d.ok&&d.acceso){
-      if(usuarioActual){usuarioActual.usuario=d.usuario;usuarioActual.perfil=d.perfil;}
-      irA('menu-screen'); aplicarPermisos();
+      if(usuarioActual){usuarioActual.usuario=d.usuario;usuarioActual.perfil=d.perfil;usuarioActual._modoEfectivo=null;}
+      const _pv=(d.perfil||'').toLowerCase();
+      if(_pv==='ambos'){irA('modo-screen');}
+      else{irA('menu-screen');aplicarPermisos();}
     } else { pintarDots(true); msg.textContent='PIN incorrecto'; msg.className='pin-msg error'; pinActual=''; setTimeout(()=>pintarDots(false),800); }
   } catch(e){ msg.textContent='Error de conexión'; msg.className='pin-msg error'; pinActual=''; }
 }
@@ -1247,7 +1284,22 @@ async function cargarVentas() {
     const r=await fetch(SCRIPT_URL+'?accion=listar');
     const d=await r.json();
     if (d.ok){
-      ventasRows=d.datos.filter(r=>r&&normFecha(r.fecha)).map(r=>({fecha:normFecha(r.fecha),efectivo:+r.efectivo||0,tarjeta:+r.tarjeta||0,tarjetaCon:+r.tarjetaCon||0,rappi:+r.rappi||0,rappiCon:+r.rappiCon||0,transferencia:+r.transferencia||0,ventaConRappi:+r.ventaConRappi||0,ventaTotalConRappi:+r.ventaTotalConRappi||0,linkFoto:r.linkFoto||''}));
+      ventasRows=d.datos.filter(r=>r&&normFecha(r.fecha)).map(r=>({
+        fecha:normFecha(r.fecha),
+        efectivo:+r.efectivo||0,
+        tarjeta:+r.tarjeta||0,           // col C = tarjeta sin comisión
+        tarjetaCon:+r.tarjetaCon||0,
+        rappi:+r.rappi||0,
+        rappiCon:+r.rappiCon||0,
+        transferencia:+r.transferencia||0,
+        ventaConRappi:+r.ventaConRappi||0,
+        ventaTotalConRappi:+r.ventaTotalConRappi||0,
+        vtSinComSinRappi:+r.vtSinComSinRappi||0,  // col H
+        vtSinComConRappi:+r.vtSinComConRappi||0,  // col I
+        vtConComSinRappi:+r.vtConComSinRappi||0,  // col J
+        vtConComConRappi:+r.vtConComConRappi||0,  // col K
+        linkFoto:r.linkFoto||''
+      }));
       renderTablaVentas(); renderResumenV();
     }
   } catch(e){ document.getElementById('tbody-v').innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--danger)">Error de conexión</td></tr>'; }
@@ -1291,11 +1343,20 @@ function renderResumenV() {
   const f=ventasRows.filter(r=>{const d=isoADate(r.fecha);return d&&d>=rango.desde&&d<=rango.hasta;});
   const sum=c=>f.reduce((a,r)=>a+(r[c]||0),0);
   const s=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  s('rv-ef',   fmt(sum('efectivo')));
+  s('rv-tr',   fmt(sum('transferencia')));
+  s('rv-tj',   fmt(sum('tarjeta')));           // col C: tarjeta s/comisión
+  s('rv-tcon', fmt(sum('tarjetaCon')));
+  s('rv-rsin', fmt(sum('rappi')));
+  s('rv-rcon', fmt(sum('rappiCon')));
+  s('rv-vssin',fmt(sum('vtSinComSinRappi'))); // col H
+  s('rv-vscon',fmt(sum('vtSinComConRappi'))); // col I
+  s('rv-vcsin',fmt(sum('vtConComSinRappi'))); // col J
+  s('rv-vccon',fmt(sum('vtConComConRappi'))); // col K
+  s('rv-prom', f.length?fmt(sum('vtConComConRappi')/f.length):'$0');
+  // IDs legacy ocultos
   s('rv-h',fmt(sum('ventaConRappi'))); s('rv-j',fmt(sum('ventaTotalConRappi')));
-  s('rv-ef',fmt(sum('efectivo'))); s('rv-tr',fmt(sum('transferencia')));
-  s('rv-tsin',fmt(sum('tarjeta'))); s('rv-tcon',fmt(sum('tarjetaCon')));
-  s('rv-rsin',fmt(sum('rappi'))); s('rv-rcon',fmt(sum('rappiCon')));
-  s('rv-sc',fmt(sum('ventaConRappi'))); s('rv-prom',f.length?fmt(sum('ventaTotalConRappi')/f.length):'$0');
+  s('rv-sc',fmt(sum('vtSinComConRappi')));
 }
 
 function exportCSV() {
@@ -1488,7 +1549,13 @@ function iniciarAnalisis() {
   if(!ventasRows.length)cargarVentas(); if(!gastosRows.length)cargarGastos();
   setTimeout(renderAnalisis,300);
 }
-function setTabA(t) { tabA=t; document.querySelectorAll('#analisis-screen .tab').forEach((b,i)=>b.classList.toggle('active',['semana','quincena','mes','custom'][i]===t)); document.getElementById('custom-a').style.display=t==='custom'?'block':'none'; renderAnalisis(); }
+function setTabA(t) {
+  tabA=t;
+  const tabs=['semana','semana_ant','quincena','mes','custom'];
+  document.querySelectorAll('#analisis-screen .tab').forEach((b,i)=>b.classList.toggle('active',tabs[i]===t));
+  document.getElementById('custom-a').style.display=t==='custom'?'block':'none';
+  renderAnalisis();
+}
 function renderAnalisis() {
   const rango=getRango(tabA,'a-desde','a-hasta'); if(!rango){document.getElementById('plabel-a').textContent='Selecciona un rango';return;}
   document.getElementById('plabel-a').textContent=fmtPeriodo(rango.desde,rango.hasta);
@@ -1616,6 +1683,8 @@ function setInvTab(tab){
   const perfil=(usuarioActual?usuarioActual.perfil:'').toLowerCase().trim();
   const esAdmin=perfil==='admin',esCaja=perfil==='caja',esCocina=perfil==='cocina',esAmbos=perfil==='ambos';
   const btnG=document.getElementById('inv-tab-gestion');if(btnG)btnG.style.display=esAdmin?'inline-flex':'none';
+  const btnInvStock=document.getElementById('inv-tab-inventario');if(btnInvStock)btnInvStock.style.display=esCaja?'none':'inline-flex';
+  if(tab==='inventario'&&esCaja){setInvTab('registrar');return;}
   const btnEntrada=document.getElementById('inv-btn-entrada'),btnUso=document.getElementById('inv-btn-uso');
   if(tab==='registrar'){
     if(esCaja){if(btnEntrada)btnEntrada.style.display='none';setInvTipo('uso');}
@@ -1640,11 +1709,19 @@ function invFiltrarInsumos(){
   if(!q){lista.style.display='none';return;}
   const perfil=(usuarioActual?.perfil||'').toLowerCase();
   const esCaja=perfil==='caja',esCocina=perfil==='cocina',esAmbos=perfil==='ambos';
+  const INSUMOS_CAJA_ENTRADA = ['pan tradicional','pan mac'];
   const base=invInsumos.filter(i=>{
     const cat=(i.categoria||'ambos').toLowerCase();
-    if(invTipoActual==='entrada'){if(esCaja)return false;return true;}
-    else{
-      if((esCaja||esAmbos)&&cat==='cocina')return false;
+    const nomLow=i.nombre.toLowerCase();
+    if(invTipoActual==='entrada'){
+      if(esCaja){
+        // Caja solo puede ver Pan tradicional y Pan mac en entrada
+        return INSUMOS_CAJA_ENTRADA.some(x=>nomLow.includes(x));
+      }
+      return true;
+    } else {
+      // Uso en cocina
+      if(esCaja&&cat==='cocina')return false;
       if(esCocina&&cat==='venta')return false;
       return true;
     }
@@ -1700,7 +1777,28 @@ async function invDoRegistrar(){
   st.textContent='';st.className='status';
   const perfil=(usuarioActual?usuarioActual.perfil:'').toLowerCase();
   const esCaja=perfil==='caja',esCocina=perfil==='cocina',esAmbos=perfil==='ambos';
-  if(esCaja&&invTipoActual==='entrada'){st.textContent='⛔ Sin permiso para registrar entradas.';st.className='status error';return;}
+  if(esCaja&&invTipoActual==='entrada'){
+    // Caja solo puede registrar Pan tradicional y Pan mac
+    const INSUMOS_CAJA_ENTRADA=['pan tradicional','pan mac'];
+    const nomLow=(ins?.nombre||'').toLowerCase();
+    if(!INSUMOS_CAJA_ENTRADA.some(x=>nomLow.includes(x))){
+      st.textContent='⛔ Solo puedes registrar Pan tradicional y Pan mac.';st.className='status error';return;
+    }
+    // Verificar que no haya entrado este insumo hoy
+    const hoyStr=new Date().toISOString().slice(0,10);
+    const yaEntro=invMovs.some(m=>
+      m.tipo==='entrada'&&
+      m.fecha===hoyStr&&
+      m.insumoNombre.toLowerCase()===nomLow&&
+      (m.nota||'').toLowerCase().includes('bodega')||
+      (m.usuario||'')===(usuarioActual?.usuario||'')&&
+      m.tipo==='entrada'&&m.fecha===hoyStr&&m.insumoNombre.toLowerCase()===nomLow
+    );
+    if(yaEntro){
+      st.textContent='⛔ Ya registraste una entrada de '+ins.nombre+' hoy. No puedes registrar más.';
+      st.className='status error';return;
+    }
+  }
   if(ins){
     const cat=(ins.categoria||'ambos').toLowerCase();
     if((esCaja||esAmbos)&&invTipoActual==='uso'&&cat==='cocina'){st.textContent='⛔ Sin permiso para usar insumos de cocina.';st.className='status error';return;}
