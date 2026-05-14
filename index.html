@@ -1309,7 +1309,7 @@ async function cargarVentas() {
 }
 
 function renderTablaVentas() {
-  const perfil=(usuarioActual?usuarioActual.perfil:'').toLowerCase();
+  const perfil=perfilEfectivo();
   const esAdmin=perfil==='admin'||perfil==='super';
   const tb=document.getElementById('tbody-v'); tb.innerHTML='';
   if (!ventasRows.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--muted)">Sin registros aún</td></tr>';return;}
@@ -1683,7 +1683,7 @@ function setInvTab(tab){
     if(btn)btn.classList.toggle('active',t===tab);if(panel)panel.style.display=t===tab?'block':'none';
   });
   if(tab==='inventario')invRenderStock();if(tab==='historial')invRenderHistorial();if(tab==='gestion')invRenderGestion();
-  const perfil=(usuarioActual?usuarioActual.perfil:'').toLowerCase().trim();
+  const perfil=perfilEfectivo();
   const esAdmin=perfil==='admin',esCaja=perfil==='caja',esCocina=perfil==='cocina',esAmbos=perfil==='ambos';
   const btnG=document.getElementById('inv-tab-gestion');if(btnG)btnG.style.display=esAdmin?'inline-flex':'none';
   const btnInvStock=document.getElementById('inv-tab-inventario');if(btnInvStock)btnInvStock.style.display=esCaja?'none':'inline-flex';
@@ -1710,7 +1710,7 @@ function invFiltrarInsumos(){
   const q=(document.getElementById('inv-f-buscar').value||'').trim().toLowerCase();
   const lista=document.getElementById('inv-f-lista');
   if(!q){lista.style.display='none';return;}
-  const perfil=(usuarioActual?.perfil||'').toLowerCase();
+  const perfil=perfilEfectivo();
   const esCaja=perfil==='caja',esCocina=perfil==='cocina',esAmbos=perfil==='ambos';
   const INSUMOS_CAJA_ENTRADA = ['pan tradicional','pan mac'];
   const base=invInsumos.filter(i=>{
@@ -1778,7 +1778,7 @@ function invOnCantChange(){
 async function invDoRegistrar(){
   const st=document.getElementById('inv-status'),ins=invInsumos.find(i=>i.id==invSelId),cant=toNum(document.getElementById('inv-f-cant').value),nota=(document.getElementById('inv-f-nota').value||'').trim();
   st.textContent='';st.className='status';
-  const perfil=(usuarioActual?usuarioActual.perfil:'').toLowerCase();
+  const perfil=perfilEfectivo(); // usa modo elegido si es Ambos
   const esCaja=perfil==='caja',esCocina=perfil==='cocina',esAmbos=perfil==='ambos';
   if(esCaja&&invTipoActual==='entrada'){
     // Caja solo puede registrar Pan tradicional y Pan mac
@@ -1905,7 +1905,7 @@ function invPoblarFiltros(){
 }
 function invRenderStock(){
   const buscar=(document.getElementById('inv-buscar-stock')?.value||'').toLowerCase(),grupo=document.getElementById('inv-filtro-grupo')?.value||'',div=document.getElementById('inv-lista-stock');if(!div)return;
-  const perfil=(usuarioActual?usuarioActual.perfil:'').toLowerCase();
+  const perfil=perfilEfectivo();
   const esAdmin=perfil==='admin'||perfil==='super',esCaja=perfil==='caja',esAmbos=perfil==='ambos';
   const lista=invInsumos.filter(i=>{
     const cat=(i.categoria||'ambos').toLowerCase();
@@ -1934,7 +1934,7 @@ function invRenderStock(){
 function invRenderHistorial(){
   const selIns=document.getElementById('inv-h-insumo')?.value||'',selTipo=document.getElementById('inv-h-tipo')?.value||'',desde=document.getElementById('inv-h-desde')?.value||'',hasta=document.getElementById('inv-h-hasta')?.value||'';
   const div=document.getElementById('inv-h-lista'),resDiv=document.getElementById('inv-h-resumen');if(!div)return;
-  const perfil=(usuarioActual?usuarioActual.perfil:'').toLowerCase();
+  const perfil=perfilEfectivo();
   const esAdmin=perfil==='admin'||perfil==='super',esCaja=perfil==='caja',esCocina=perfil==='cocina',esAmbos=perfil==='ambos';
   const btnXls=document.querySelector('[onclick="invExportarExcel()"]');
   if(btnXls)btnXls.style.display=esAdmin?'inline-block':'none';
