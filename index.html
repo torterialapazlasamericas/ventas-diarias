@@ -895,7 +895,7 @@ tbody tr{animation:fadeIn .2s ease;}
 
 <script>
 const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbykcDiW-bCujg7gXUJciqLw_YkEADDF6QGLpV1PX3ZgeiPI9YGBHbqROIGoqzytNXU/exec";
-const INV_URL     = "https://script.google.com/macros/s/AKfycbxm88zkl5ZcoH_lgMMFeVnG9HWkKkx-qWON3V5tcbqg9qPDx7sDeQr53pzgIgy7fa6h/exec";
+const INV_URL     = "https://script.google.com/macros/s/AKfycbw4KdnYGBEcpZygjMU7d7Fhfmp0Yx9nnbpbvDhQwC2n5sr8XWD8wRmJQeNpyzvmqTP2/exec";
 const GOOGLE_CLIENT_ID = "280797416294-m1q3nggftt0cpa06ljilpmmcu6gv967g.apps.googleusercontent.com";
 
 let ventasRows = [], gastosRows = [];
@@ -954,8 +954,18 @@ function perfilEfectivo() {
   return p;
 }
 
+// Precarga datos en segundo plano al llegar al menú
+// Así cuando el usuario entra a ventas o inventario ya están listos
+function precargarDatos() {
+  if (!ventasRows.length)  cargarVentas();
+  if (!gastosRows.length)  cargarGastos();
+  if (!invInsumos.length)  cargarInventario();
+}
+
 function cerrarSesion() {
   localStorage.removeItem('vu_correo'); localStorage.removeItem('vu_usuario'); localStorage.removeItem('vu_perfil');
+  // Limpiar caché en memoria para el próximo usuario
+  ventasRows=[]; gastosRows=[]; invInsumos=[]; invMovs=[];
   usuarioActual=null; irA('login-screen'); setTimeout(()=>iniciarGoogleLogin(),300);
 }
 
@@ -970,7 +980,7 @@ function irA(screenId) {
     // Quitar foco de cualquier botón para evitar dígitos fantasma en móvil
     setTimeout(() => { if (document.activeElement) document.activeElement.blur(); }, 100);
   }
-  if (screenId==='menu-screen')     aplicarPermisos();
+  if (screenId==='menu-screen')     { aplicarPermisos(); precargarDatos(); }
   if (screenId==='ventas-screen')   iniciarVentas();
   if (screenId==='gastos-screen')   iniciarGastos();
   if (screenId==='admin-screen')    iniciarAdmin();
@@ -1083,7 +1093,7 @@ function iniciarVentas() {
   document.getElementById('vw-status1').textContent='';
   document.getElementById('vw-status5').textContent='';
   vwRenderProductos();
-  if (!ventasRows.length) cargarVentas(); else {renderTablaVentas();renderResumenV();}
+  if (!ventasRows.length) { cargarVentas(); cargarGastos(); } else {renderTablaVentas();renderResumenV();}
 }
 
 function vwIrPaso(paso,direccion) {
@@ -1386,7 +1396,7 @@ function iniciarGastos() {
   registrarChipsListener();
   document.getElementById('hdr-gastos').textContent=new Date().toLocaleDateString('es-MX',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   document.getElementById('g-fecha').value=dateToIso(new Date());
-  if (!gastosRows.length) cargarGastos(); else {renderTablaGastos();renderResumenG();}
+  if (!gastosRows.length) { /* ya se carga desde iniciarVentas en paralelo */ } else {renderTablaGastos();renderResumenG();}
 }
 function setTabG(t) { tabG=t; document.querySelectorAll('#gastos-screen .tab').forEach((b,i)=>b.classList.toggle('active',['semana','quincena','mes','custom'][i]===t)); document.getElementById('custom-g').style.display=t==='custom'?'block':'none'; renderResumenG(); }
 
@@ -1667,6 +1677,10 @@ async function iniciarInventario(){
   setInvTab('registrar');
   const el=document.getElementById('inv-fecha-hdr');
   if(el)el.textContent=new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
+  // Si ya hay datos en memoria, usar caché (no recargar)
+  if(invInsumos.length){
+    invPoblarFiltros();invRenderUltimos();return;
+  }
   const ultimos=document.getElementById('inv-ultimos');
   if(ultimos)ultimos.innerHTML='<div style="color:var(--muted);font-size:13px;padding:10px 0"><span class="spin"></span> Cargando...</div>';
   await cargarInventario();
