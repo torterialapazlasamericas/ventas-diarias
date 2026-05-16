@@ -636,10 +636,9 @@ tbody tr{animation:fadeIn .2s ease;}
           </div>
         </div>
         <div class="resumen-grid" style="margin-bottom:1rem">
-          <div class="rmetric dest"><div class="rl">Total ventas (con Rappi)</div><div class="rv blue" id="a-ventas">—</div></div>
-          <div class="rmetric dest"><div class="rl">Total gastos</div><div class="rv red" id="a-gastos">—</div></div>
-          <div class="rmetric"><div class="rl">Días con venta</div><div class="rv" id="a-dv">—</div></div>
-          <div class="rmetric"><div class="rl">Días con gasto</div><div class="rv" id="a-dg">—</div></div>
+          <div class="rmetric dest"><div class="rl">Total ventas sin Rappi</div><div class="rv blue" id="a-vsin">—</div></div>
+          <div class="rmetric dest"><div class="rl">Total ventas con Rappi</div><div class="rv blue" id="a-vcon">—</div></div>
+          <div class="rmetric dest" style="grid-column:1/-1"><div class="rl">Total gastos</div><div class="rv red" id="a-gastos">—</div></div>
           <div class="rmetric"><div class="rl">Promedio venta</div><div class="rv" id="a-pv">—</div></div>
           <div class="rmetric"><div class="rl">Promedio gasto</div><div class="rv" id="a-pg">—</div></div>
         </div>
@@ -915,7 +914,28 @@ function getRango(tab,desdeId,hastaId) {
   const hoy=hoy0();
   if (tab==='semana') { const desde=inicioSemana(hoy); const hasta=new Date(desde); hasta.setDate(desde.getDate()+6); return {desde,hasta}; }
   if (tab==='semana_ant') { const ini=inicioSemana(hoy); const hasta=new Date(ini); hasta.setDate(ini.getDate()-1); const desde=new Date(hasta); desde.setDate(hasta.getDate()-6); return {desde,hasta}; }
-  if (tab==='quincena') { const d=hoy.getDate(),y=hoy.getFullYear(),m=hoy.getMonth(); return d<=15?{desde:new Date(y,m,1),hasta:new Date(y,m,15)}:{desde:new Date(y,m,16),hasta:new Date(y,m+1,0)}; }
+  if (tab==='quincena') {
+    const d=hoy.getDate(),y=hoy.getFullYear(),m=hoy.getMonth();
+    // Quincena actual
+    const qActual = d<=15 ? {desde:new Date(y,m,1),hasta:new Date(y,m,15)} : {desde:new Date(y,m,16),hasta:new Date(y,m+1,0)};
+    // Si es día 1 o día 16 (inicio de quincena), verificar si hay datos
+    if (d===1 || d===16) {
+      const isoDesde = dateToIso(qActual.desde);
+      const tieneData = ventasRows.some(r=>r.fecha>=isoDesde && r.fecha<=dateToIso(qActual.hasta));
+      if (!tieneData) {
+        // Mostrar quincena anterior
+        if (d===1) {
+          // Anterior: 16-fin del mes pasado
+          const mp=m===0?11:m-1,yp=m===0?y-1:y;
+          return {desde:new Date(yp,mp,16),hasta:new Date(yp,mp+1===12?0:mp+1,0)};
+        } else {
+          // Anterior: 1-15 del mes actual
+          return {desde:new Date(y,m,1),hasta:new Date(y,m,15)};
+        }
+      }
+    }
+    return qActual;
+  }
   if (tab==='mes') return {desde:new Date(hoy.getFullYear(),hoy.getMonth(),1),hasta:new Date(hoy.getFullYear(),hoy.getMonth()+1,0)};
   if (tab==='custom') { const desde=isoADate(document.getElementById(desdeId).value); const hasta=isoADate(document.getElementById(hastaId).value); return (desde&&hasta)?{desde,hasta}:null; }
   return null;
@@ -1585,7 +1605,11 @@ function renderAnalisis() {
   document.getElementById('plabel-a').textContent=fmtPeriodo(rango.desde,rango.hasta);
   const fv=ventasRows.filter(r=>{const d=isoADate(r.fecha);return d&&d>=rango.desde&&d<=rango.hasta;});
   const fg=gastosRows.filter(g=>{const d=isoADate(g.fecha);return d&&d>=rango.desde&&d<=rango.hasta;});
-  const totalV=fv.reduce((a,r)=>a+(r.ventaTotalConRappi||0),0);
+  // Col J = vtConComSinRappi (venta total c/com sin rappi)
+  // Col K = vtConComConRappi (venta total c/com con rappi)
+  const totalVSinRappi = fv.reduce((a,r)=>a+(r.vtConComSinRappi||0),0);
+  const totalVConRappi = fv.reduce((a,r)=>a+(r.vtConComConRappi||0),0);
+  const totalV = totalVConRappi; // usar con Rappi para ganancia
   const totalG=fg.reduce((a,g)=>a+g.cantidad,0);
   const ganancia=totalV-totalG; const neg=ganancia<0;
   const margen=totalV>0?((ganancia/totalV)*100).toFixed(1)+'%':'—';
@@ -1593,9 +1617,11 @@ function renderAnalisis() {
   document.getElementById('a-margen').textContent=margen; document.getElementById('a-margen').className='margen-val'+(neg?' neg':'');
   document.getElementById('ganancia-box').className='ganancia-box'+(neg?' negativa':'');
   document.getElementById('ganancia-label').className='ganancia-label'+(neg?' neg':'');
-  document.getElementById('a-ventas').textContent=fmt(totalV); document.getElementById('a-gastos').textContent=fmt(totalG);
-  document.getElementById('a-dv').textContent=fv.length; document.getElementById('a-dg').textContent=new Set(fg.map(g=>g.fecha)).size;
-  document.getElementById('a-pv').textContent=fv.length?fmt(totalV/fv.length):'$0'; document.getElementById('a-pg').textContent=fg.length?fmt(totalG/fg.length):'$0';
+  document.getElementById('a-vsin').textContent=fmt(totalVSinRappi);
+  document.getElementById('a-vcon').textContent=fmt(totalVConRappi);
+  document.getElementById('a-gastos').textContent=fmt(totalG);
+  document.getElementById('a-pv').textContent=fv.length?fmt(totalV/fv.length):'$0';
+  document.getElementById('a-pg').textContent=fg.length?fmt(totalG/fg.length):'$0';
   document.getElementById('a-gef').textContent=fmt(fg.filter(g=>g.formaPago==='Efectivo').reduce((a,g)=>a+g.cantidad,0));
   document.getElementById('a-gtj').textContent=fmt(fg.filter(g=>g.formaPago==='Tarjeta').reduce((a,g)=>a+g.cantidad,0));
   document.getElementById('a-gtr').textContent=fmt(fg.filter(g=>g.formaPago==='Transferencia').reduce((a,g)=>a+g.cantidad,0));
