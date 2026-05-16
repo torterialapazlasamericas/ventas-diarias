@@ -1338,10 +1338,10 @@ async function cargarVentas() {
         transferencia:+r.transferencia||0,
         ventaConRappi:+r.ventaConRappi||0,
         ventaTotalConRappi:+r.ventaTotalConRappi||0,
-        vtSinComSinRappi:+r.vtSinComSinRappi||0,  // col H
-        vtSinComConRappi:+r.vtSinComConRappi||0,  // col I
-        vtConComSinRappi:+r.vtConComSinRappi||0,  // col J
-        vtConComConRappi:+r.vtConComConRappi||0,  // col K
+        vtSinComSinRappi:+r.ventaSinRappi||0,      // col H
+        vtSinComConRappi:+r.ventaConRappiTot||0,  // col I
+        vtConComSinRappi:+r.ventaConRappi||0,     // col J
+        vtConComConRappi:+r.ventaTotalConRappi||0, // col K
         linkFoto:r.linkFoto||''
       }));
       renderTablaVentas(); renderResumenV();
