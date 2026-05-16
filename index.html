@@ -332,6 +332,18 @@ tbody tr{animation:fadeIn .2s ease;}
   <button class="foto-modal-close" onclick="cerrarFotoModal()">✕ Cerrar</button>
 </div>
 
+<!-- ══ MODAL CONFIRMACIÓN WIZARD ══ -->
+<div class="modal-overlay" id="modal-vw-confirm">
+  <div class="modal" style="max-width:360px">
+    <h3>📋 Confirmar registro</h3>
+    <div id="vwc-contenido"></div>
+    <div class="modal-btns" style="margin-top:1.25rem">
+      <button class="btn-cancel" onclick="cerrarModal('modal-vw-confirm')">← Regresar</button>
+      <button class="btn-confirm" onclick="vwConfirmarYGuardar()">✅ Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ MODAL VENTAS ══ -->
 <div class="modal-overlay" id="modal-v">
   <div class="modal">
@@ -432,8 +444,10 @@ tbody tr{animation:fadeIn .2s ease;}
           </div>
         </div>
         <div id="vw-foto-btn-wrap" style="text-align:center;margin-bottom:1rem">
-          <label for="vw-foto-input" class="btn-primary" style="display:inline-block;width:auto;padding:11px 28px;cursor:pointer">📷 Tomar / Adjuntar foto</label>
-          <input type="file" id="vw-foto-input" accept="image/*" capture="environment" style="display:none" onchange="vwSeleccionarFoto(event)"/>
+          <div style="display:flex;flex-direction:column;gap:10px;align-items:center">
+            <label for="vw-foto-camara" class="btn-primary" style="display:inline-block;width:auto;padding:11px 28px;cursor:pointer">📷 Tomar foto o elegir de galería</label>
+            <input type="file" id="vw-foto-camara" accept="image/*" style="display:none" onchange="vwSeleccionarFoto(event)"/>
+          </div>
         </div>
         <div class="status" id="vw-status5"></div>
       </div>
@@ -1141,7 +1155,7 @@ function vwIrPaso(paso,direccion) {
 }
 
 function vwNavRegresar(){ vwIrPaso(_vwPasoActual-1,false); }
-function vwNavSiguiente(){ if(_vwPasoActual===5)vwGuardar();else vwSiguiente(_vwPasoActual); }
+function vwNavSiguiente(){ if(_vwPasoActual===5)vwMostrarConfirmacion();else vwSiguiente(_vwPasoActual); }
 
 function vwSiguiente(p) {
   if (p===1) {
@@ -1210,8 +1224,49 @@ function vwQuitarFoto() {
   vwFotoData=null;
   document.getElementById('vw-foto-preview').style.display='none';
   document.getElementById('vw-foto-btn-wrap').style.display='block';
-  document.getElementById('vw-foto-input').value='';
+  document.getElementById('vw-foto-camara').value='';
   document.getElementById('vw-foto-img').src='';
+}
+
+function vwMostrarConfirmacion() {
+  const fecha  = document.getElementById('v-fecha').value;
+  const ef     = parseFloat(document.getElementById('v-efectivo').value)||0;
+  const tj     = parseFloat(document.getElementById('v-tarjeta').value)||0;
+  const tr     = parseFloat(document.getElementById('v-transfer').value)||0;
+  const ra     = parseFloat(document.getElementById('v-rappi').value)||0;
+  const prop   = parseFloat(document.getElementById('v-propinas').value)||0;
+  const envio  = parseFloat(document.getElementById('v-envio').value)||0;
+  const total  = ef + tj + tr + ra;
+
+  const fila = (label, valor, color='') =>
+    `<div class="modal-row">
+      <span class="ml">${label}</span>
+      <span class="mv" ${color?`style="color:${color}"`:''}>$${Math.round(valor).toLocaleString('es-MX')}</span>
+    </div>`;
+
+  let html = `
+    <div class="modal-row"><span class="ml">Fecha</span><span class="mv">${labelFecha(fecha)}</span></div>
+    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:8px 0 4px;border-top:1px solid var(--border);margin-top:4px">Ingresos</div>
+    ${fila('Efectivo', ef)}
+    ${fila('Tarjeta', tj)}
+    ${fila('Transferencia', tr)}
+    ${fila('Rappi', ra)}`;
+
+  if (prop > 0 || envio > 0) {
+    html += `<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:8px 0 4px;border-top:1px solid var(--border);margin-top:4px">Gastos del día</div>`;
+    if (prop  > 0) html += fila('Propinas', prop);
+    if (envio > 0) html += fila('Envío a domicilio', envio);
+  }
+
+  html += `<div class="modal-total"><span>Total ingresos</span><span>$${Math.round(total).toLocaleString('es-MX')}</span></div>`;
+
+  document.getElementById('vwc-contenido').innerHTML = html;
+  document.getElementById('modal-vw-confirm').classList.add('visible');
+}
+
+async function vwConfirmarYGuardar() {
+  cerrarModal('modal-vw-confirm');
+  await vwGuardar();
 }
 
 async function vwGuardar() {
