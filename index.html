@@ -621,6 +621,17 @@ tbody tr{animation:fadeIn .2s ease;}
       <div style="font-size:11px;color:var(--muted);margin-top:.5rem">Formato: <code style="background:var(--bg);padding:2px 6px;border-radius:4px">VENTA.XLS</code> exportado desde Soft Restaurant</div>
       <input type="file" id="prod-file-input" accept=".xls,.xlsx" style="display:none" onchange="prodCargarArchivo(event)"/>
     </div>
+
+    <!-- HISTORIAL DE FECHAS GUARDADAS -->
+    <div id="prod-historial-card" class="resumen-card" style="margin-bottom:1.25rem;display:none">
+      <div style="padding:.85rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <div style="font-family:'DM Serif Display',serif;font-size:16px;font-weight:400">📅 Reportes guardados</div>
+        <button class="btn-corregir" onclick="prodCargarHistorial()" id="prod-btn-refrescar">↻ Actualizar</button>
+      </div>
+      <div id="prod-historial-lista" style="padding:.5rem 0">
+        <div style="text-align:center;padding:1.5rem;color:var(--muted);font-size:13px"><span class="spin"></span> Cargando...</div>
+      </div>
+    </div>
     <!-- PANEL ANÁLISIS -->
     <div id="prod-panel" style="display:none">
       <!-- Métricas resumen -->
@@ -663,6 +674,7 @@ tbody tr{animation:fadeIn .2s ease;}
           <button class="tab active" onclick="setProdTab('productos')">🛒 Productos</button>
           <button class="tab" onclick="setProdTab('grupos')">📦 Por grupo</button>
           <button class="tab" onclick="setProdTab('ranking')">🏆 Ranking</button>
+          <button class="tab" onclick="setProdTab('piezas')">🧮 Por piezas</button>
         </div>
         <!-- TAB PRODUCTOS -->
         <div id="prod-panel-productos" style="padding:0">
@@ -712,6 +724,10 @@ tbody tr{animation:fadeIn .2s ease;}
             <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:.75rem">Top 10 por cantidad vendida</div>
             <div id="prod-ranking-cant"></div>
           </div>
+        </div>
+        <!-- TAB POR PIEZAS -->
+        <div id="prod-panel-piezas" style="display:none;padding:1.25rem">
+          <div id="prod-piezas-lista"></div>
         </div>
       </div>
     </div>
@@ -895,8 +911,8 @@ tbody tr{animation:fadeIn .2s ease;}
 <span id="btn-v"      style="display:none"></span>
 
 <script>
-const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbyqUDR-KPo1gTVybrtWKOwG1uMX16NMWx9UQCm52HfdQ_h7RAZmBzTaId48uNnzTenV/exec";
-const INV_URL          = "https://script.google.com/macros/s/AKfycbw4KdnYGBEcpZygjMU7d7Fhfmp0Yx9nnbpbvDhQwC2n5sr8XWD8wRmJQeNpyzvmqTP2/exec";
+const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbzIOrckER2UVWuJNmgObiPoq9S0AqFp_hXfsbaO9xh4T3FV3N-LsHMjH_q8ebTqDH9d/exec";
+const INV_URL          = "hhttps://script.google.com/macros/s/AKfycbw4KdnYGBEcpZygjMU7d7Fhfmp0Yx9nnbpbvDhQwC2n5sr8XWD8wRmJQeNpyzvmqTP2/exec";
 const GOOGLE_CLIENT_ID = "280797416294-m1q3nggftt0cpa06ljilpmmcu6gv967g.apps.googleusercontent.com";
 
 let ventasRows = [], gastosRows = [];
@@ -1820,7 +1836,79 @@ async function invAgregarInsumo(){
 let prodDatos=[],prodMeta={},prodTabActual='productos';
 
 function iniciarProductos(){
-  if(prodDatos.length)prodRenderTodo();
+  if(prodDatos.length){prodRenderTodo();return;}
+  prodCargarHistorial();
+}
+
+async function prodCargarHistorial(){
+  const card=document.getElementById('prod-historial-card');
+  const lista=document.getElementById('prod-historial-lista');
+  const btn=document.getElementById('prod-btn-refrescar');
+  card.style.display='block';
+  lista.innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--muted);font-size:13px"><span class="spin"></span> Cargando...</div>';
+  if(btn)btn.disabled=true;
+  try{
+    const r=await fetch(SCRIPT_URL+'?accion=listarProductosVendidos');
+    const d=await r.json();
+    if(d.ok&&d.fechas.length){
+      lista.innerHTML=d.fechas.map(f=>{
+        const fechaLabel=labelFecha(f.fecha);
+        const totalFmt='$'+Math.round(f.totalVenta).toLocaleString('es-MX');
+        const nota=f.nota?`<span style="font-style:italic;color:var(--muted)"> · ${f.nota}</span>`:'';
+        return`<div style="display:flex;align-items:center;gap:12px;padding:10px 1.25rem;border-bottom:1px solid var(--border)">
+          <div style="font-size:22px">📅</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;font-size:14px">${fechaLabel}${nota}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px">
+              ${f.productos} productos · ${f.totalPiezas} piezas · <span style="color:var(--accent);font-weight:600">${totalFmt}</span>
+            </div>
+          </div>
+          <button onclick="prodVerFechaHistorial('${f.fecha}')"
+            style="padding:7px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap">
+            Ver →
+          </button>
+        </div>`;
+      }).join('');
+    }else{
+      lista.innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--muted);font-size:13px">Sin reportes guardados aún</div>';
+    }
+  }catch(e){
+    lista.innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--danger);font-size:13px">⚠️ Error al cargar historial</div>';
+  }
+  if(btn)btn.disabled=false;
+}
+
+async function prodVerFechaHistorial(fecha){
+  const lista=document.getElementById('prod-historial-lista');
+  // Mostrar loading en el botón correspondiente
+  const btns=lista.querySelectorAll('button');
+  btns.forEach(b=>{if(b.textContent.trim()==='Ver →'&&b.onclick.toString().includes(fecha)){b.textContent='Cargando...';b.disabled=true;}});
+  try{
+    const r=await fetch(SCRIPT_URL+'?accion=obtenerProductosPorFecha&fecha='+encodeURIComponent(fecha));
+    const d=await r.json();
+    if(d.ok&&d.productos.length){
+      // Reconstituir prodDatos y prodMeta desde el sheet
+      prodDatos=d.productos;
+      // Formatear fecha "2026-05-05" → "05/05/2026" para el meta
+      const [y,m,dy]=fecha.split('-');
+      prodMeta={
+        titulo:'PRODUCTOS VENDIDOS DEL '+dy+'/'+m+'/'+y,
+        fechaDesde:dy+'/'+m+'/'+y,
+        fechaHasta:dy+'/'+m+'/'+y,
+        sucursal:'Tortería La Paz Las Américas',
+        nota:d.nota||''
+      };
+      // Ocultar historial y mostrar panel
+      document.getElementById('prod-historial-card').style.display='none';
+      prodRenderTodo();
+    }else{
+      alert('No se encontraron productos para esta fecha.');
+      btns.forEach(b=>{b.textContent='Ver →';b.disabled=false;});
+    }
+  }catch(e){
+    alert('Error de conexión: '+e.message);
+    btns.forEach(b=>{b.textContent='Ver →';b.disabled=false;});
+  }
 }
 
 function prodHandleDrop(event){
@@ -1899,6 +1987,7 @@ function prodReset(){
   document.getElementById('prod-panel').style.display='none';
   document.getElementById('prod-upload-zone').style.display='block';
   prodResetZona();
+  prodCargarHistorial();
 }
 
 function prodRenderTodo(){
@@ -1927,11 +2016,12 @@ function prodRenderTodo(){
 
 function setProdTab(tab){
   prodTabActual=tab;
-  const tabs=['productos','grupos','ranking'];
+  const tabs=['productos','grupos','ranking','piezas'];
   document.querySelectorAll('#prod-tabs .tab').forEach((b,i)=>b.classList.toggle('active',tabs[i]===tab));
   document.getElementById('prod-panel-productos').style.display=tab==='productos'?'block':'none';
   document.getElementById('prod-panel-grupos').style.display=tab==='grupos'?'block':'none';
   document.getElementById('prod-panel-ranking').style.display=tab==='ranking'?'block':'none';
+  document.getElementById('prod-panel-piezas').style.display=tab==='piezas'?'block':'none';
   prodRenderTab(tab);
 }
 
@@ -1939,6 +2029,185 @@ function prodRenderTab(tab){
   if(tab==='productos')prodRenderProductos();
   if(tab==='grupos')prodRenderGrupos();
   if(tab==='ranking')prodRenderRanking();
+  if(tab==='piezas')prodRenderPiezas();
+}
+
+// ── TAB: POR PIEZAS ───────────────────────────────────────────
+function prodRenderPiezas(){
+  const div=document.getElementById('prod-piezas-lista');
+  if(!div||!prodDatos.length)return;
+
+  // ── helpers de detección ─────────────────────────────────
+  const inc=(desc,word)=>desc.toLowerCase().includes(word.toLowerCase());
+
+  // Clasificar cada producto en categorías de piezas
+  // Orden de evaluación: primero los específicos, luego los genéricos
+  const CATEGORIAS=[
+    {
+      id:'pan_trad',
+      label:'Pan Tradicional',
+      icon:'🥖',
+      color:'#8B5E3C',
+      match: d=>inc(d,'tradicional'),
+      desglose: true,
+    },
+    {
+      id:'pan_mac',
+      label:'Pan Mac',
+      icon:'🍞',
+      color:'#1B4F8A',
+      match: d=>inc(d,'mac'),
+      desglose: true,
+    },
+    {
+      id:'refresco_des',
+      label:'Refresco Desechable',
+      icon:'🥤',
+      color:'#C0392B',
+      match: d=>inc(d,'coca 400') || inc(d,'coca400') || inc(d,'desechable'),
+      desglose: false,
+    },
+    {
+      id:'refrescos',
+      label:'Refrescos',
+      icon:'🫙',
+      color:'#1A6B4A',
+      match: (d,g)=>{
+        // Grupo REFRESCO EMBOTELLADO, excluyendo varios
+        if(!g.toLowerCase().includes('refresco embotellado'))return false;
+        if(inc(d,'rappi'))return false;
+        if(inc(d,'sin azucar'))return false;
+        if(inc(d,'lechita'))return false;
+        if(inc(d,'jamaica'))return false;
+        if(inc(d,'mineral'))return false;
+        if(inc(d,'agua'))return false;
+        if(inc(d,'coca 400')||inc(d,'coca400')||inc(d,'desechable'))return false;
+        return true;
+      },
+      desglose: false,
+    },
+    {
+      id:'lechitas',
+      label:'Lechitas',
+      icon:'🥛',
+      color:'#6B3D8A',
+      match: d=>inc(d,'lechita'),
+      desglose: false,
+    },
+    {
+      id:'jamaicas',
+      label:'Jamaicas',
+      icon:'🌺',
+      color:'#C0392B',
+      match: d=>inc(d,'jamaica'),
+      desglose: false,
+    },
+    {
+      id:'agua',
+      label:'Agua',
+      icon:'💧',
+      color:'#2E86AB',
+      match: d=>inc(d,'agua 500') && !inc(d,'mineral'),
+      desglose: false,
+    },
+    {
+      id:'agua_min',
+      label:'Agua Mineral',
+      icon:'🫧',
+      color:'#4CAF50',
+      match: d=>inc(d,'agua mineral'),
+      desglose: false,
+    },
+    {
+      id:'coca_sin',
+      label:'Coca Sin Azúcar',
+      icon:'🥃',
+      color:'#7A7770',
+      match: d=>inc(d,'sin azucar'),
+      desglose: false,
+    },
+  ];
+
+  // Acumular por categoría
+  // Para las que tienen desglose, clasificamos en 4 subtipos
+  const acum={};
+  CATEGORIAS.forEach(c=>{
+    acum[c.id]={total:0,sencilla:0,combinada:0,sencillaRappi:0,combinadaRappi:0,items:[]};
+  });
+
+  prodDatos.forEach(p=>{
+    const d=p.descripcion;
+    const g=p.grupo;
+    for(const cat of CATEGORIAS){
+      const coincide=cat.match.length===2?cat.match(d,g):cat.match(d);
+      if(coincide){
+        acum[cat.id].total+=p.cantidad;
+        acum[cat.id].items.push(p);
+        if(cat.desglose){
+          const esRappi=inc(d,'rappi');
+          const esComb=inc(d,'combinada');
+          if(esRappi&&esComb)       acum[cat.id].combinadaRappi+=p.cantidad;
+          else if(esRappi&&!esComb) acum[cat.id].sencillaRappi+=p.cantidad;
+          else if(!esRappi&&esComb) acum[cat.id].combinada+=p.cantidad;
+          else                       acum[cat.id].sencilla+=p.cantidad;
+        }
+        break; // cada producto va a máximo 1 categoría
+      }
+    }
+  });
+
+  const totalGeneral=CATEGORIAS.reduce((a,c)=>a+acum[c.id].total,0);
+
+  div.innerHTML=CATEGORIAS.map(cat=>{
+    const a=acum[cat.id];
+    if(!a.total)return''; // ocultar categorías sin datos
+    const pct=totalGeneral>0?((a.total/totalGeneral)*100).toFixed(1):'0';
+    const barW=Math.max(2,Math.round(a.total/totalGeneral*100));
+
+    // Desglose para pan
+    let desgloseHtml='';
+    if(cat.desglose){
+      const sub=[
+        {label:'Sencilla',val:a.sencilla},
+        {label:'Combinada',val:a.combinada},
+        {label:'Sencilla Rappi',val:a.sencillaRappi},
+        {label:'Combinada Rappi',val:a.combinadaRappi},
+      ].filter(s=>s.val>0);
+      if(sub.length){
+        desgloseHtml=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:.6rem">
+          ${sub.map(s=>`<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:5px 12px;display:flex;align-items:center;gap:6px">
+            <span style="font-size:12px;color:var(--muted)">${s.label}</span>
+            <span style="font-size:15px;font-weight:700;color:${cat.color}">${s.val}</span>
+          </div>`).join('')}
+        </div>`;
+      }
+    }
+
+    return`<div style="padding:1rem 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:40px;height:40px;border-radius:10px;background:${cat.color}18;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${cat.icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap">
+            <div style="font-weight:700;font-size:15px">${cat.label}</div>
+            <div style="font-family:'DM Serif Display',serif;font-size:26px;color:${cat.color};line-height:1">${a.total} <span style="font-size:13px;font-weight:400;color:var(--muted)">pzas</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:5px">
+            <div style="flex:1;background:var(--border);border-radius:4px;height:6px">
+              <div style="width:${barW}%;background:${cat.color};border-radius:4px;height:6px;transition:width .4s"></div>
+            </div>
+            <span style="font-size:12px;color:var(--muted);white-space:nowrap">${pct}% del total</span>
+          </div>
+          ${desgloseHtml}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Totalizador al final
+  div.innerHTML+=`<div style="padding:1rem 0;display:flex;justify-content:space-between;align-items:center">
+    <span style="font-size:13px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Total piezas clasificadas</span>
+    <span style="font-family:'DM Serif Display',serif;font-size:24px;color:var(--accent)">${totalGeneral}</span>
+  </div>`;
 }
 
 function prodRenderProductos(){
