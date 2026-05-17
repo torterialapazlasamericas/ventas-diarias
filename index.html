@@ -609,28 +609,102 @@ tbody tr{animation:fadeIn .2s ease;}
     <span id="prod-hdr-periodo" style="font-size:13px;color:var(--muted)"></span>
   </div>
   <div style="max-width:980px;margin:0 auto;padding:1.25rem 1rem 2rem">
-    <!-- ZONA DE CARGA -->
-    <div id="prod-upload-zone" style="border:2px dashed var(--border);border-radius:14px;background:var(--surface);padding:2.5rem 1.5rem;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:1.25rem;"
-      onclick="document.getElementById('prod-file-input').click()"
-      ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
-      ondragleave="this.style.borderColor='var(--border)'"
-      ondrop="prodHandleDrop(event)">
-      <div style="font-size:40px;margin-bottom:.75rem">📂</div>
-      <div style="font-family:'DM Serif Display',serif;font-size:18px;font-weight:400;margin-bottom:.4rem">Cargar reporte de Soft Restaurant</div>
-      <div style="font-size:13px;color:var(--muted)">Arrastra el archivo .XLS aquí, o haz clic para seleccionarlo</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:.5rem">Formato: <code style="background:var(--bg);padding:2px 6px;border-radius:4px">VENTA.XLS</code> exportado desde Soft Restaurant</div>
-      <input type="file" id="prod-file-input" accept=".xls,.xlsx" style="display:none" onchange="prodCargarArchivo(event)"/>
+
+    <!-- PANTALLA DE INICIO (bienvenida) -->
+    <div id="prod-inicio" style="display:block">
+      <!-- Dos opciones principales -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem">
+        <!-- Opción 1: Cargar archivo -->
+        <div id="prod-upload-zone" style="border:2px dashed var(--border);border-radius:14px;background:var(--surface);padding:2rem 1.25rem;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;"
+          onclick="document.getElementById('prod-file-input').click()"
+          ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+          ondragleave="this.style.borderColor='var(--border)'"
+          ondrop="prodHandleDrop(event)">
+          <div style="font-size:36px;margin-bottom:.6rem">📂</div>
+          <div style="font-family:'DM Serif Display',serif;font-size:17px;font-weight:400;margin-bottom:.3rem">Cargar reporte</div>
+          <div style="font-size:12px;color:var(--muted)">Sube el .XLS de Soft Restaurant</div>
+          <input type="file" id="prod-file-input" accept=".xls,.xlsx" style="display:none" onchange="prodCargarArchivo(event)"/>
+        </div>
+        <!-- Opción 2: Ver reportes -->
+        <div style="border:2px solid var(--border);border-radius:14px;background:var(--surface);padding:2rem 1.25rem;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;"
+          onclick="prodMostrarReportes()"
+          onmouseover="this.style.borderColor='var(--accent)'"
+          onmouseout="this.style.borderColor='var(--border)'">
+          <div style="font-size:36px;margin-bottom:.6rem">📅</div>
+          <div style="font-family:'DM Serif Display',serif;font-size:17px;font-weight:400;margin-bottom:.3rem">Ver reportes</div>
+          <div style="font-size:12px;color:var(--muted)">Consulta días anteriores guardados</div>
+        </div>
+      </div>
+
+      <!-- Últimos 3 reportes -->
+      <div class="resumen-card" style="margin-bottom:1.25rem">
+        <div style="padding:.85rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <div style="font-family:'DM Serif Display',serif;font-size:16px;font-weight:400">Últimos reportes</div>
+          <button class="btn-corregir" onclick="prodMostrarReportes()" style="color:var(--accent);border-color:var(--accent)">Ver todos →</button>
+        </div>
+        <div id="prod-ultimos-lista" style="padding:.25rem 0">
+          <div style="text-align:center;padding:1.5rem;color:var(--muted);font-size:13px"><span class="spin"></span> Cargando...</div>
+        </div>
+      </div>
+
+      <!-- Botón análisis por período -->
+      <div style="text-align:center;margin-bottom:1rem">
+        <button onclick="prodMostrarAnalisisPeriodo()"
+          style="padding:12px 28px;background:var(--surface);border:1.5px solid var(--accent);color:var(--accent);border-radius:10px;font-family:'DM Serif Display',serif;font-size:17px;cursor:pointer;transition:background .15s">
+          📊 Analizar ventas por período
+        </button>
+      </div>
     </div>
 
-    <!-- HISTORIAL DE FECHAS GUARDADAS -->
-    <div id="prod-historial-card" class="resumen-card" style="margin-bottom:1.25rem;display:none">
-      <div style="padding:.85rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-        <div style="font-family:'DM Serif Display',serif;font-size:16px;font-weight:400">📅 Reportes guardados</div>
-        <button class="btn-corregir" onclick="prodCargarHistorial()" id="prod-btn-refrescar">↻ Actualizar</button>
+    <!-- PANEL TODOS LOS REPORTES -->
+    <div id="prod-todos-panel" style="display:none">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem">
+        <button class="nav-back" onclick="prodVolverInicio()" style="font-size:14px;padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;color:var(--muted)">← Volver</button>
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;font-weight:400">📅 Todos los reportes guardados</div>
       </div>
-      <div id="prod-historial-lista" style="padding:.5rem 0">
-        <div style="text-align:center;padding:1.5rem;color:var(--muted);font-size:13px"><span class="spin"></span> Cargando...</div>
+      <div class="resumen-card">
+        <div style="padding:.85rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:13px;color:var(--muted)" id="prod-todos-count"></span>
+          <button class="btn-corregir" onclick="prodCargarHistorial(true)" id="prod-btn-refrescar">↻ Actualizar</button>
+        </div>
+        <div id="prod-historial-lista" style="padding:.25rem 0">
+          <div style="text-align:center;padding:1.5rem;color:var(--muted);font-size:13px"><span class="spin"></span> Cargando...</div>
+        </div>
       </div>
+    </div>
+
+    <!-- PANEL ANÁLISIS POR PERÍODO -->
+    <div id="prod-periodo-panel" style="display:none">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem">
+        <button class="nav-back" onclick="prodVolverInicio()" style="font-size:14px;padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;color:var(--muted)">← Volver</button>
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;font-weight:400">📊 Análisis por período</div>
+      </div>
+      <div class="resumen-card">
+        <div class="tabs" id="prod-periodo-tabs">
+          <button class="tab active" onclick="setProdPeriodoTab('semana')">Esta semana</button>
+          <button class="tab" onclick="setProdPeriodoTab('quincena')">Quincena</button>
+          <button class="tab" onclick="setProdPeriodoTab('mes')">Este mes</button>
+          <button class="tab" onclick="setProdPeriodoTab('custom')">Fecha específica</button>
+        </div>
+        <div class="resumen-body">
+          <div id="prod-periodo-custom" style="display:none;margin-bottom:1rem">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <input type="date" id="prod-periodo-desde" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg)"/>
+              <span style="color:var(--muted);font-size:13px">al</span>
+              <input type="date" id="prod-periodo-hasta" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg)"/>
+              <button class="btn-buscar" onclick="prodRenderPeriodo()">Buscar</button>
+            </div>
+          </div>
+          <div id="prod-periodo-resultado">
+            <div style="text-align:center;padding:2rem;color:var(--muted);font-size:13px">Selecciona un período para ver el análisis</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ZONA DE CARGA (oculta, solo para drag&drop programático) -->
+    <div style="display:none">
+      <input type="file" id="prod-file-input-hidden" accept=".xls,.xlsx" style="display:none" onchange="prodCargarArchivo(event)"/>
     </div>
     <!-- PANEL ANÁLISIS -->
     <div id="prod-panel" style="display:none">
@@ -912,7 +986,7 @@ tbody tr{animation:fadeIn .2s ease;}
 
 <script>
 const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbzIOrckER2UVWuJNmgObiPoq9S0AqFp_hXfsbaO9xh4T3FV3N-LsHMjH_q8ebTqDH9d/exec";
-const INV_URL          = "hhttps://script.google.com/macros/s/AKfycbw4KdnYGBEcpZygjMU7d7Fhfmp0Yx9nnbpbvDhQwC2n5sr8XWD8wRmJQeNpyzvmqTP2/exec";
+const INV_URL          = "https://script.google.com/macros/s/AKfycbw4KdnYGBEcpZygjMU7d7Fhfmp0Yx9nnbpbvDhQwC2n5sr8XWD8wRmJQeNpyzvmqTP2/exec";
 const GOOGLE_CLIENT_ID = "280797416294-m1q3nggftt0cpa06ljilpmmcu6gv967g.apps.googleusercontent.com";
 
 let ventasRows = [], gastosRows = [];
@@ -1837,59 +1911,87 @@ let prodDatos=[],prodMeta={},prodTabActual='productos';
 
 function iniciarProductos(){
   if(prodDatos.length){prodRenderTodo();return;}
-  prodCargarHistorial();
+  prodMostrarInicio();
+  prodCargarHistorial(false); // carga silenciosa para los últimos 3
 }
 
-async function prodCargarHistorial(){
-  const card=document.getElementById('prod-historial-card');
-  const lista=document.getElementById('prod-historial-lista');
-  const btn=document.getElementById('prod-btn-refrescar');
-  card.style.display='block';
+function prodMostrarInicio(){
+  document.getElementById('prod-inicio').style.display='block';
+  document.getElementById('prod-todos-panel').style.display='none';
+  document.getElementById('prod-periodo-panel').style.display='none';
+  document.getElementById('prod-panel').style.display='none';
+}
+
+function prodMostrarReportes(){
+  document.getElementById('prod-inicio').style.display='none';
+  document.getElementById('prod-todos-panel').style.display='block';
+  document.getElementById('prod-periodo-panel').style.display='none';
+  prodCargarHistorial(true);
+}
+
+function prodMostrarAnalisisPeriodo(){
+  document.getElementById('prod-inicio').style.display='none';
+  document.getElementById('prod-todos-panel').style.display='none';
+  document.getElementById('prod-periodo-panel').style.display='block';
+  setProdPeriodoTab('semana');
+}
+
+function prodVolverInicio(){
+  prodMostrarInicio();
+}
+
+let _prodFechasCache=[];
+
+async function prodCargarHistorial(todosModo){
+  // todosModo=true → panel completo, false → solo últimos 3 en inicio
+  const listaId = todosModo ? 'prod-historial-lista' : 'prod-ultimos-lista';
+  const lista   = document.getElementById(listaId);
+  if(!lista) return;
   lista.innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--muted);font-size:13px"><span class="spin"></span> Cargando...</div>';
-  if(btn)btn.disabled=true;
   try{
     const r=await fetch(SCRIPT_URL+'?accion=listarProductosVendidos');
     const d=await r.json();
-    if(d.ok&&d.fechas.length){
-      lista.innerHTML=d.fechas.map(f=>{
-        const fechaLabel=labelFecha(f.fecha);
-        const totalFmt='$'+Math.round(f.totalVenta).toLocaleString('es-MX');
-        const nota=f.nota?`<span style="font-style:italic;color:var(--muted)"> · ${f.nota}</span>`:'';
-        return`<div style="display:flex;align-items:center;gap:12px;padding:10px 1.25rem;border-bottom:1px solid var(--border)">
-          <div style="font-size:22px">📅</div>
-          <div style="flex:1;min-width:0">
-            <div style="font-weight:600;font-size:14px">${fechaLabel}${nota}</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:2px">
-              ${f.productos} productos · ${f.totalPiezas} piezas · <span style="color:var(--accent);font-weight:600">${totalFmt}</span>
-            </div>
-          </div>
-          <button onclick="prodVerFechaHistorial('${f.fecha}')"
-            style="padding:7px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap">
-            Ver →
-          </button>
-        </div>`;
-      }).join('');
+    _prodFechasCache=d.ok?d.fechas:[];
+
+    const fechas = todosModo ? _prodFechasCache : _prodFechasCache.slice(0,3);
+    const countEl=document.getElementById('prod-todos-count');
+    if(countEl) countEl.textContent=_prodFechasCache.length+' reportes guardados';
+
+    if(fechas.length){
+      lista.innerHTML=fechas.map(f=>prodFechaCardHtml(f)).join('');
     }else{
       lista.innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--muted);font-size:13px">Sin reportes guardados aún</div>';
     }
   }catch(e){
-    lista.innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--danger);font-size:13px">⚠️ Error al cargar historial</div>';
+    lista.innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--danger);font-size:13px">⚠️ Error al cargar</div>';
   }
-  if(btn)btn.disabled=false;
+}
+
+function prodFechaCardHtml(f){
+  const fechaLabel=labelFecha(f.fecha);
+  const totalFmt='$'+Math.round(f.totalVenta).toLocaleString('es-MX');
+  const nota=f.nota?`<span style="font-style:italic;color:var(--muted)"> · ${f.nota}</span>`:'';
+  return`<div style="display:flex;align-items:center;gap:12px;padding:10px 1.25rem;border-bottom:1px solid var(--border)">
+    <div style="font-size:22px">📅</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-weight:600;font-size:14px">${fechaLabel}${nota}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px">
+        ${f.productos} productos · ${f.totalPiezas} piezas · <span style="color:var(--accent);font-weight:600">${totalFmt}</span>
+      </div>
+    </div>
+    <button onclick="prodVerFechaHistorial('${f.fecha}')"
+      style="padding:7px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap">
+      Ver →
+    </button>
+  </div>`;
 }
 
 async function prodVerFechaHistorial(fecha){
-  const lista=document.getElementById('prod-historial-lista');
-  // Mostrar loading en el botón correspondiente
-  const btns=lista.querySelectorAll('button');
-  btns.forEach(b=>{if(b.textContent.trim()==='Ver →'&&b.onclick.toString().includes(fecha)){b.textContent='Cargando...';b.disabled=true;}});
   try{
     const r=await fetch(SCRIPT_URL+'?accion=obtenerProductosPorFecha&fecha='+encodeURIComponent(fecha));
     const d=await r.json();
     if(d.ok&&d.productos.length){
-      // Reconstituir prodDatos y prodMeta desde el sheet
       prodDatos=d.productos;
-      // Formatear fecha "2026-05-05" → "05/05/2026" para el meta
       const [y,m,dy]=fecha.split('-');
       prodMeta={
         titulo:'PRODUCTOS VENDIDOS DEL '+dy+'/'+m+'/'+y,
@@ -1898,16 +2000,115 @@ async function prodVerFechaHistorial(fecha){
         sucursal:'Tortería La Paz Las Américas',
         nota:d.nota||''
       };
-      // Ocultar historial y mostrar panel
-      document.getElementById('prod-historial-card').style.display='none';
+      document.getElementById('prod-inicio').style.display='none';
+      document.getElementById('prod-todos-panel').style.display='none';
       prodRenderTodo();
     }else{
       alert('No se encontraron productos para esta fecha.');
-      btns.forEach(b=>{b.textContent='Ver →';b.disabled=false;});
     }
   }catch(e){
     alert('Error de conexión: '+e.message);
-    btns.forEach(b=>{b.textContent='Ver →';b.disabled=false;});
+  }
+}
+
+// ── Análisis por período ──────────────────────────────────────
+let _prodPeriodoTab='semana';
+
+function setProdPeriodoTab(tab){
+  _prodPeriodoTab=tab;
+  document.querySelectorAll('#prod-periodo-tabs .tab').forEach((b,i)=>
+    b.classList.toggle('active',['semana','quincena','mes','custom'][i]===tab));
+  document.getElementById('prod-periodo-custom').style.display=tab==='custom'?'block':'none';
+  if(tab!=='custom') prodRenderPeriodo();
+}
+
+async function prodRenderPeriodo(){
+  const res=document.getElementById('prod-periodo-resultado');
+  res.innerHTML='<div style="text-align:center;padding:2rem;color:var(--muted);font-size:13px"><span class="spin"></span> Calculando...</div>';
+
+  // Obtener rango de fechas
+  let desde,hasta;
+  const hoy=hoy0();
+  if(_prodPeriodoTab==='semana'){desde=inicioSemana(hoy);hasta=new Date(desde);hasta.setDate(desde.getDate()+6);}
+  else if(_prodPeriodoTab==='quincena'){const d=hoy.getDate(),y=hoy.getFullYear(),m=hoy.getMonth();desde=d<=15?new Date(y,m,1):new Date(y,m,16);hasta=d<=15?new Date(y,m,15):new Date(y,m+1,0);}
+  else if(_prodPeriodoTab==='mes'){desde=new Date(hoy.getFullYear(),hoy.getMonth(),1);hasta=new Date(hoy.getFullYear(),hoy.getMonth()+1,0);}
+  else{
+    const dv=document.getElementById('prod-periodo-desde').value;
+    const hv=document.getElementById('prod-periodo-hasta').value;
+    if(!dv||!hv){res.innerHTML='<div style="color:var(--muted);font-size:13px">Selecciona un rango de fechas</div>';return;}
+    desde=isoADate(dv);hasta=isoADate(hv);
+  }
+
+  const desdeIso=dateToIso(desde),hastaIso=dateToIso(hasta);
+
+  // Filtrar fechas del cache que caigan en el rango
+  const fechasEnRango=_prodFechasCache.filter(f=>f.fecha>=desdeIso&&f.fecha<=hastaIso);
+
+  if(!fechasEnRango.length){
+    res.innerHTML=`<div style="text-align:center;padding:2rem;color:var(--muted);font-size:13px">Sin reportes guardados para este período<br><span style="font-size:11px">${labelFecha(desdeIso)} — ${labelFecha(hastaIso)}</span></div>`;
+    return;
+  }
+
+  // Cargar todos los productos de esas fechas
+  res.innerHTML='<div style="text-align:center;padding:2rem;color:var(--muted);font-size:13px"><span class="spin"></span> Cargando '+fechasEnRango.length+' días...</div>';
+  try{
+    const promesas=fechasEnRango.map(f=>
+      fetch(SCRIPT_URL+'?accion=obtenerProductosPorFecha&fecha='+encodeURIComponent(f.fecha)).then(r=>r.json())
+    );
+    const resultados=await Promise.all(promesas);
+    const todos=[];
+    resultados.forEach(d=>{if(d.ok)todos.push(...d.productos);});
+
+    if(!todos.length){res.innerHTML='<div style="text-align:center;padding:2rem;color:var(--muted)">Sin datos</div>';return;}
+
+    // Agrupar por descripción y sumar cantidades
+    const mapa={};
+    todos.forEach(p=>{
+      const key=p.descripcion.trim().toUpperCase();
+      if(!mapa[key])mapa[key]={descripcion:p.descripcion,grupo:p.grupo,precio:p.precio,cantidad:0,ventaTotal:0};
+      mapa[key].cantidad+=p.cantidad;
+      mapa[key].ventaTotal+=p.ventaTotal;
+    });
+    const agrupados=Object.values(mapa).sort((a,b)=>b.ventaTotal-a.ventaTotal);
+    const totalVenta=agrupados.reduce((a,p)=>a+p.ventaTotal,0);
+    const totalPiezas=agrupados.reduce((a,p)=>a+p.cantidad,0);
+
+    res.innerHTML=`
+      <div style="margin-bottom:1rem;padding:.75rem;background:var(--acc-bg);border-radius:10px;display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+        <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase">Período</div><div style="font-weight:600;font-size:13px">${labelFecha(desdeIso)} — ${labelFecha(hastaIso)}</div></div>
+        <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase">Días</div><div style="font-weight:600;font-size:13px">${fechasEnRango.length}</div></div>
+        <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase">Total vendido</div><div style="font-weight:700;font-size:16px;color:var(--accent)">$${Math.round(totalVenta).toLocaleString('es-MX')}</div></div>
+        <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase">Piezas</div><div style="font-weight:700;font-size:16px">${totalPiezas.toLocaleString('es-MX')}</div></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th style="text-align:left">#</th>
+            <th style="text-align:left">Descripción</th>
+            <th style="text-align:left">Grupo</th>
+            <th>Cantidad</th>
+            <th>Venta total</th>
+            <th>% del total</th>
+          </tr></thead>
+          <tbody>
+            ${agrupados.map((p,i)=>{
+              const pct=totalVenta>0?((p.ventaTotal/totalVenta)*100).toFixed(1):'0';
+              const barW=Math.max(2,Math.round(p.ventaTotal/totalVenta*100));
+              const medal=['🥇','🥈','🥉'][i]||i+1;
+              return`<tr>
+                <td style="font-size:12px;color:var(--muted)">${medal}</td>
+                <td style="text-align:left;font-weight:${i<3?600:400};font-size:13px;white-space:normal;max-width:220px">${p.descripcion}</td>
+                <td style="text-align:left"><span style="font-size:11px;padding:2px 7px;border-radius:10px;background:var(--bg);color:var(--muted);border:1px solid var(--border)">${p.grupo}</span></td>
+                <td style="font-weight:600;color:var(--blue)">${p.cantidad}</td>
+                <td style="font-weight:600;color:var(--accent)">$${p.ventaTotal.toLocaleString('es-MX')}</td>
+                <td><div style="display:flex;align-items:center;gap:5px"><div style="width:40px;background:var(--border);border-radius:3px;height:5px"><div style="width:${barW}%;background:var(--accent);border-radius:3px;height:5px"></div></div><span style="font-size:11px;color:var(--muted)">${pct}%</span></div></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }catch(e){
+    res.innerHTML='<div style="color:var(--danger);font-size:13px;padding:1rem">⚠️ Error: '+e.message+'</div>';
   }
 }
 
@@ -1985,17 +2186,40 @@ function prodResetZona(){
 function prodReset(){
   prodDatos=[];prodMeta={};
   document.getElementById('prod-panel').style.display='none';
-  document.getElementById('prod-upload-zone').style.display='block';
   prodResetZona();
-  prodCargarHistorial();
+  prodMostrarInicio();
 }
 
 function prodRenderTodo(){
-  document.getElementById('prod-upload-zone').style.display='none';
+  document.getElementById('prod-inicio').style.display='none';
+  document.getElementById('prod-todos-panel').style.display='none';
   document.getElementById('prod-panel').style.display='block';
-  document.getElementById('prod-titulo-archivo').textContent=prodMeta.titulo||'Reporte de ventas';
-  document.getElementById('prod-subtitulo-archivo').textContent=prodMeta.sucursal||'';
-  if(prodMeta.fechaDesde&&prodMeta.fechaHasta)document.getElementById('prod-hdr-periodo').textContent=`Del ${prodMeta.fechaDesde} al ${prodMeta.fechaHasta}`;
+
+  // ── Título del panel: solo "Fecha · Día de la semana" ────────
+  // prodMeta.fechaDesde viene en formato "05/05/2026" (desde XLS) o construido desde "2026-05-05"
+  let fechaIso='';
+  if(prodMeta.fechaDesde){
+    // "05/05/2026" → "2026-05-05"
+    const partes=prodMeta.fechaDesde.split('/');
+    if(partes.length===3) fechaIso=partes[2]+'-'+partes[1]+'-'+partes[0];
+    else fechaIso=prodMeta.fechaDesde; // ya era iso
+  }
+  const DIAS=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const MESES_L=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  let tituloPanel='Reporte de ventas';
+  let subtituloPanel=prodMeta.nota||prodMeta.sucursal||'';
+  if(fechaIso&&/^\d{4}-\d{2}-\d{2}$/.test(fechaIso)){
+    const [y,m,d]=fechaIso.split('-').map(Number);
+    const fechaObj=new Date(y,m-1,d);
+    const dia=DIAS[fechaObj.getDay()];
+    tituloPanel=`${dia} ${d} de ${MESES_L[m-1]} ${y}`;
+  }
+  document.getElementById('prod-titulo-archivo').textContent=tituloPanel;
+  document.getElementById('prod-subtitulo-archivo').textContent=subtituloPanel;
+  // Header del módulo: limpio
+  const hdrEl=document.getElementById('prod-hdr-periodo');
+  if(hdrEl) hdrEl.textContent=fechaIso?labelFecha(fechaIso):'';
+
   const totalVenta=prodDatos.reduce((a,p)=>a+p.ventaTotal,0);
   const totalPiezas=prodDatos.reduce((a,p)=>a+p.cantidad,0);
   const grupos=[...new Set(prodDatos.map(p=>p.grupo))];
