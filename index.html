@@ -985,7 +985,7 @@ tbody tr{animation:fadeIn .2s ease;}
 <span id="btn-v"      style="display:none"></span>
 
 <script>
-const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbzIOrckER2UVWuJNmgObiPoq9S0AqFp_hXfsbaO9xh4T3FV3N-LsHMjH_q8ebTqDH9d/exec";
+const SCRIPT_URL       = "https://script.google.com/macros/s/AKfycbxBGHWn6FxIY9Z1rVwppBfRA-2mU3kke8Gga8dUsQPdHYCl2nI6hm-y_jFdFSBBXoWq/exec";
 const INV_URL          = "https://script.google.com/macros/s/AKfycbw4KdnYGBEcpZygjMU7d7Fhfmp0Yx9nnbpbvDhQwC2n5sr8XWD8wRmJQeNpyzvmqTP2/exec";
 const GOOGLE_CLIENT_ID = "280797416294-m1q3nggftt0cpa06ljilpmmcu6gv967g.apps.googleusercontent.com";
 
@@ -1992,16 +1992,13 @@ async function prodVerFechaHistorial(fecha){
     const d=await r.json();
     if(d.ok&&d.productos.length){
       prodDatos=d.productos;
-      const [y,m,dy]=fecha.split('-');
+      // fecha viene como "2026-05-05" — la guardamos directamente en fechaDesde como ISO
       prodMeta={
-        titulo:'PRODUCTOS VENDIDOS DEL '+dy+'/'+m+'/'+y,
-        fechaDesde:dy+'/'+m+'/'+y,
-        fechaHasta:dy+'/'+m+'/'+y,
-        sucursal:'Tortería La Paz Las Américas',
-        nota:d.nota||''
+        fechaDesde: fecha,  // ISO "2026-05-05", prodRenderTodo lo convierte correctamente
+        fechaHasta: fecha,
+        sucursal:   'Tortería La Paz Las Américas',
+        nota:       d.nota||''
       };
-      document.getElementById('prod-inicio').style.display='none';
-      document.getElementById('prod-todos-panel').style.display='none';
       prodRenderTodo();
     }else{
       alert('No se encontraron productos para esta fecha.');
