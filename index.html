@@ -2023,11 +2023,38 @@ async function prodRenderPeriodo(){
   const res=document.getElementById('prod-periodo-resultado');
   res.innerHTML='<div style="text-align:center;padding:2rem;color:var(--muted);font-size:13px"><span class="spin"></span> Calculando...</div>';
 
-  // Obtener rango de fechas
+  // Si el cache está vacío, recargarlo antes de calcular
+  if(!_prodFechasCache.length){
+    try{
+      const r=await fetch(SCRIPT_URL+'?accion=listarProductosVendidos');
+      const d=await r.json();
+      if(d.ok) _prodFechasCache=d.fechas;
+    }catch(e){}
+  }
   let desde,hasta;
   const hoy=hoy0();
   if(_prodPeriodoTab==='semana'){desde=inicioSemana(hoy);hasta=new Date(desde);hasta.setDate(desde.getDate()+6);}
-  else if(_prodPeriodoTab==='quincena'){const d=hoy.getDate(),y=hoy.getFullYear(),m=hoy.getMonth();desde=d<=15?new Date(y,m,1):new Date(y,m,16);hasta=d<=15?new Date(y,m,15):new Date(y,m+1,0);}
+  else if(_prodPeriodoTab==='quincena'){
+    const hd=hoy.getDate(),hy=hoy.getFullYear(),hm=hoy.getMonth();
+    // Quincena actual
+    let desdeAct=hd<=15?new Date(hy,hm,1):new Date(hy,hm,16);
+    let hastaAct=hd<=15?new Date(hy,hm,15):new Date(hy,hm+1,0);
+    const desdeActIso=dateToIso(desdeAct),hastaActIso=dateToIso(hastaAct);
+    const hayDatosActual=_prodFechasCache.some(f=>f.fecha>=desdeActIso&&f.fecha<=hastaActIso);
+    if(hayDatosActual){
+      desde=desdeAct;hasta=hastaAct;
+    }else{
+      // Quincena anterior
+      if(hd<=15){
+        // Estamos en 1-15, anterior es 16-fin del mes pasado
+        const mp=hm===0?11:hm-1,yp=hm===0?hy-1:hy;
+        desde=new Date(yp,mp,16);hasta=new Date(yp,mp+1,0);
+      }else{
+        // Estamos en 16-fin, anterior es 1-15 del mismo mes
+        desde=new Date(hy,hm,1);hasta=new Date(hy,hm,15);
+      }
+    }
+  }
   else if(_prodPeriodoTab==='mes'){desde=new Date(hoy.getFullYear(),hoy.getMonth(),1);hasta=new Date(hoy.getFullYear(),hoy.getMonth()+1,0);}
   else{
     const dv=document.getElementById('prod-periodo-desde').value;
