@@ -2158,43 +2158,80 @@ async function prodParsearArchivo(file){
       });
     }
     const buffer=await file.arrayBuffer();
-    const wb=XLSX.read(buffer,{type:'array',cellDates:true});
+    const wb=XLSX.read(buffer,{type:'array',cellDates:true,raw:false});
     const sh=wb.Sheets[wb.SheetNames[0]];
-    const raw=XLSX.utils.sheet_to_json(sh,{header:1,defval:null});
-    // Metadatos
-    const tituloRaw=raw[0]?.[0]||'';
+    const raw=XLSX.utils.sheet_to_json(sh,{header:1,defval:null,blankrows:false});
+
+    // ── Metadatos: buscar título con fechas en cualquier fila de las primeras 5 ──
+    let tituloRaw='',mFechas=null;
+    for(let i=0;i<Math.min(5,raw.length);i++){
+      const celda=String(raw[i]?.[0]||raw[i]?.[1]||'');
+      const m=celda.match(/(\d{2}[\/-]\d{2}[\/-]\d{4})\s*(?:AL|A|-)\s*(\d{2}[\/-]\d{2}[\/-]\d{4})/i);
+      if(m){tituloRaw=celda;mFechas=m;break;}
+    }
+    // Normalizar separador de fecha a "/"
+    const normFechaXLS=f=>f?f.replace(/-/g,'/'):f;
     prodMeta.titulo=tituloRaw.trim();
-    const mFechas=tituloRaw.match(/(\d{2}\/\d{2}\/\d{4})\s+AL\s+(\d{2}\/\d{2}\/\d{4})/i);
-    prodMeta.fechaDesde=mFechas?mFechas[1]:'';
-    prodMeta.fechaHasta=mFechas?mFechas[2]:'';
-    prodMeta.sucursal=(raw[1]?.[0]||'').trim();
-    // Encontrar fila de headers
+    prodMeta.fechaDesde=mFechas?normFechaXLS(mFechas[1]):'';
+    prodMeta.fechaHasta=mFechas?normFechaXLS(mFechas[2]):'';
+    prodMeta.sucursal='';
+    for(let i=0;i<Math.min(5,raw.length);i++){
+      const v=String(raw[i]?.[0]||'').trim();
+      if(v&&!v.match(/\d{2}[\/-]\d{2}[\/-]\d{4}/)&&!v.match(/PRODUCTOS VENDIDOS/i)&&!v.match(/RFC/i)){
+        prodMeta.sucursal=v;break;
+      }
+    }
+
+    // ── Buscar fila de headers: busca la fila que contenga CLAVE o DESCRIPCION ──
+    // Busca en cualquier columna de cualquier fila (no solo col A)
     let headerRow=-1;
-    for(let i=0;i<raw.length;i++){if(String(raw[i]?.[0]||'').trim().toUpperCase()==='CLAVE'){headerRow=i;break;}}
-    if(headerRow<0)throw new Error('No se encontró la fila de encabezados (CLAVE)');
-    // Mapear columnas
-    const headers=raw[headerRow].map(h=>String(h||'').trim().toUpperCase());
-    const col=name=>headers.indexOf(name);
-    const iClave=col('CLAVE'),iDesc=col('DESCRIPCION'),iGrupo=col('GRUPO'),iPrecio=col('PRECIO'),iCantidad=col('CANTIDAD'),iVentaTotal=col('VENTA_TOTAL');
-    if(iDesc<0||iCantidad<0||iVentaTotal<0)throw new Error('El archivo no tiene las columnas esperadas');
-    // Parsear productos
+    const HEADER_CLAVES=['CLAVE','DESCRIPCION','DESCRIPCIÓN','CANTIDAD','VENTA_TOTAL','VENTA TOTAL'];
+    for(let i=0;i<raw.length;i++){
+      const fila=raw[i];if(!fila)continue;
+      const filaStr=fila.map(c=>String(c||'').trim().toUpperCase());
+      const coincide=HEADER_CLAVES.filter(k=>filaStr.some(c=>c===k||c.replace(/[^A-Z]/g,'')===k.replace(/[^A-Z]/g,'')));
+      if(coincide.length>=2){headerRow=i;break;}
+    }
+    if(headerRow<0)throw new Error('No se reconoció el formato del archivo. Asegúrate de exportarlo directamente desde Soft Restaurant sin abrir en Excel o Sheets.');
+
+    // ── Mapear columnas por nombre (tolerante a acentos y espacios) ──
+    const norm=s=>String(s||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[\s_]+/g,'');
+    const headers=raw[headerRow].map(h=>norm(h));
+    const col=(...names)=>{for(const n of names){const i=headers.indexOf(norm(n));if(i>=0)return i;}return -1;};
+
+    const iClave    = col('CLAVE');
+    const iDesc     = col('DESCRIPCION','DESCRIPCIÓN','DESCRIPTION');
+    const iGrupo    = col('GRUPO','GROUP');
+    const iPrecio   = col('PRECIO','PRICE','PRECIO DE VENTA','PRECIOCATALOGO');
+    const iCantidad = col('CANTIDAD','QUANTITY','CANT');
+    const iVentaTotal = col('VENTA_TOTAL','VENTATOTAL','VENTA TOTAL','TOTAL VENTA','TOTALVENTA');
+
+    if(iDesc<0)  throw new Error('No se encontró la columna DESCRIPCION');
+    if(iCantidad<0) throw new Error('No se encontró la columna CANTIDAD');
+    if(iVentaTotal<0) throw new Error('No se encontró la columna VENTA_TOTAL');
+
+    // ── Parsear productos ──
     prodDatos=[];
     for(let r=headerRow+1;r<raw.length;r++){
       const row=raw[r];
-      if(!row||row[iClave]===null||row[iClave]===undefined)continue;
-      const descripcion=String(row[iDesc]||'').trim();
-      const grupo=String(row[iGrupo]||'Sin grupo').trim();
-      const precio=Number(row[iPrecio]||0);
-      const cantidad=Number(row[iCantidad]||0);
-      const ventaTotal=Number(row[iVentaTotal]||0);
-      if(!descripcion||cantidad<=0)continue;
-      prodDatos.push({clave:row[iClave],descripcion,grupo,precio,cantidad,ventaTotal});
+      if(!row||row.every(c=>c===null||c===''||c===undefined))continue;
+      // Detectar fila de totales (CLAVE vacía y DESCRIPCION vacía o dice "TOTAL")
+      const claveVal=iClave>=0?row[iClave]:null;
+      const descVal=String(row[iDesc]||'').trim();
+      if(!descVal)continue;
+      if(descVal.toUpperCase().includes('TOTAL')&&(!claveVal||claveVal===null))continue;
+      const cantidad=Number(String(row[iCantidad]||'0').replace(/[^0-9.-]/g,''))||0;
+      if(cantidad<=0)continue;
+      const precio=Number(String(row[iPrecio>=0?iPrecio:0]||'0').replace(/[^0-9.-]/g,''))||0;
+      const ventaTotal=Number(String(row[iVentaTotal]||'0').replace(/[^0-9.-]/g,''))||0;
+      const grupo=iGrupo>=0?String(row[iGrupo]||'Sin grupo').trim():'Sin grupo';
+      prodDatos.push({clave:claveVal,descripcion:descVal,grupo,precio,cantidad,ventaTotal});
     }
-    if(!prodDatos.length)throw new Error('No se encontraron productos en el archivo');
+    if(!prodDatos.length)throw new Error('No se encontraron productos con cantidad mayor a 0');
     prodResetZona();prodRenderTodo();
   }catch(err){
     prodResetZona();
-    document.getElementById('prod-upload-zone').innerHTML+=`<div style="margin-top:1rem;color:var(--danger);font-size:13px;font-weight:500">⚠️ Error: ${err.message}</div>`;
+    document.getElementById('prod-upload-zone').innerHTML+=`<div style="margin-top:1rem;color:var(--danger);font-size:13px;font-weight:500">⚠️ ${err.message}</div>`;
   }
 }
 
