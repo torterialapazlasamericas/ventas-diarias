@@ -2158,74 +2158,77 @@ async function prodParsearArchivo(file){
       });
     }
     const buffer=await file.arrayBuffer();
-    const wb=XLSX.read(buffer,{type:'array',cellDates:true,raw:false});
+    // raw:true para que no convierta números — más confiable
+    const wb=XLSX.read(buffer,{type:'array',cellDates:false,raw:true});
     const sh=wb.Sheets[wb.SheetNames[0]];
-    const raw=XLSX.utils.sheet_to_json(sh,{header:1,defval:null,blankrows:false});
+    const raw=XLSX.utils.sheet_to_json(sh,{header:1,defval:'',raw:true});
 
-    // ── Metadatos: buscar título con fechas en cualquier fila de las primeras 5 ──
-    let tituloRaw='',mFechas=null;
-    for(let i=0;i<Math.min(5,raw.length);i++){
-      const celda=String(raw[i]?.[0]||raw[i]?.[1]||'');
-      const m=celda.match(/(\d{2}[\/-]\d{2}[\/-]\d{4})\s*(?:AL|A|-)\s*(\d{2}[\/-]\d{2}[\/-]\d{4})/i);
-      if(m){tituloRaw=celda;mFechas=m;break;}
-    }
-    // Normalizar separador de fecha a "/"
-    const normFechaXLS=f=>f?f.replace(/-/g,'/'):f;
-    prodMeta.titulo=tituloRaw.trim();
-    prodMeta.fechaDesde=mFechas?normFechaXLS(mFechas[1]):'';
-    prodMeta.fechaHasta=mFechas?normFechaXLS(mFechas[2]):'';
-    prodMeta.sucursal='';
-    for(let i=0;i<Math.min(5,raw.length);i++){
-      const v=String(raw[i]?.[0]||'').trim();
-      if(v&&!v.match(/\d{2}[\/-]\d{2}[\/-]\d{4}/)&&!v.match(/PRODUCTOS VENDIDOS/i)&&!v.match(/RFC/i)){
-        prodMeta.sucursal=v;break;
+    // ── Helper: limpiar y normalizar texto ──
+    const limpiar=v=>{
+      if(v===null||v===undefined)return'';
+      return String(v).replace(/[\u0000-\u001F\u007F-\u009F\uFEFF]/g,'').trim();
+    };
+    const normH=s=>limpiar(s).toUpperCase().replace(/[^A-Z0-9]/g,'');
+
+    // ── Metadatos: buscar título con fechas ──
+    let fechaDesde='',fechaHasta='',sucursal='';
+    for(let i=0;i<Math.min(6,raw.length);i++){
+      const fila=raw[i];
+      for(let j=0;j<Math.min(4,fila.length);j++){
+        const txt=limpiar(fila[j]);
+        const m=txt.match(/(\d{2}[\/-]\d{2}[\/-]\d{4})\s*(?:AL|A)\s*(\d{2}[\/-]\d{2}[\/-]\d{4})/i);
+        if(m){fechaDesde=m[1].replace(/-/g,'/');fechaHasta=m[2].replace(/-/g,'/');break;}
+        if(!sucursal&&txt&&!txt.match(/\d{2}[\/-]\d{2}[\/-]\d{4}/)&&!txt.match(/RFC/i)&&!txt.match(/CALLE/i)&&!txt.match(/PRODUCTO/i)){sucursal=txt;}
       }
+      if(fechaDesde)break;
     }
+    prodMeta={titulo:'',fechaDesde,fechaHasta,sucursal,nota:''};
 
-    // ── Buscar fila de headers: busca la fila que contenga CLAVE o DESCRIPCION ──
-    // Busca en cualquier columna de cualquier fila (no solo col A)
+    // ── Buscar fila de headers: busca fila con DESCRIPCION y CANTIDAD ──
     let headerRow=-1;
-    const HEADER_CLAVES=['CLAVE','DESCRIPCION','DESCRIPCIÓN','CANTIDAD','VENTA_TOTAL','VENTA TOTAL'];
     for(let i=0;i<raw.length;i++){
-      const fila=raw[i];if(!fila)continue;
-      const filaStr=fila.map(c=>String(c||'').trim().toUpperCase());
-      const coincide=HEADER_CLAVES.filter(k=>filaStr.some(c=>c===k||c.replace(/[^A-Z]/g,'')===k.replace(/[^A-Z]/g,'')));
-      if(coincide.length>=2){headerRow=i;break;}
+      const fila=raw[i].map(normH);
+      const tieneDesc=fila.some(c=>c==='DESCRIPCION'||c==='DESCRIPCION'||c.includes('DESCRIP'));
+      const tieneCant=fila.some(c=>c==='CANTIDAD'||c.includes('CANT'));
+      if(tieneDesc&&tieneCant){headerRow=i;break;}
     }
-    if(headerRow<0)throw new Error('No se reconoció el formato del archivo. Asegúrate de exportarlo directamente desde Soft Restaurant sin abrir en Excel o Sheets.');
+    if(headerRow<0)throw new Error('No se reconoció el formato. Verifica que el archivo sea el reporte de Soft Restaurant.');
 
-    // ── Mapear columnas por nombre (tolerante a acentos y espacios) ──
-    const norm=s=>String(s||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[\s_]+/g,'');
-    const headers=raw[headerRow].map(h=>norm(h));
-    const col=(...names)=>{for(const n of names){const i=headers.indexOf(norm(n));if(i>=0)return i;}return -1;};
+    // ── Mapear columnas por nombre ──
+    const hdrs=raw[headerRow].map(normH);
+    const colIdx=(...names)=>{
+      for(const n of names){
+        const nNorm=n.toUpperCase().replace(/[^A-Z0-9]/g,'');
+        const i=hdrs.findIndex(h=>h===nNorm||h.includes(nNorm)||nNorm.includes(h));
+        if(i>=0)return i;
+      }
+      return -1;
+    };
+    const iDesc     =colIdx('DESCRIPCION','DESCRIPTION');
+    const iGrupo    =colIdx('GRUPO','GROUP');
+    const iPrecio   =colIdx('PRECIO','PRICE');
+    const iCantidad =colIdx('CANTIDAD','CANT','QTY');
+    const iVentaTotal=colIdx('VENTATOTAL','VENTATOT','TOTALVENTA');
+    const iClave    =colIdx('CLAVE','KEY');
 
-    const iClave    = col('CLAVE');
-    const iDesc     = col('DESCRIPCION','DESCRIPCIÓN','DESCRIPTION');
-    const iGrupo    = col('GRUPO','GROUP');
-    const iPrecio   = col('PRECIO','PRICE','PRECIO DE VENTA','PRECIOCATALOGO');
-    const iCantidad = col('CANTIDAD','QUANTITY','CANT');
-    const iVentaTotal = col('VENTA_TOTAL','VENTATOTAL','VENTA TOTAL','TOTAL VENTA','TOTALVENTA');
-
-    if(iDesc<0)  throw new Error('No se encontró la columna DESCRIPCION');
-    if(iCantidad<0) throw new Error('No se encontró la columna CANTIDAD');
-    if(iVentaTotal<0) throw new Error('No se encontró la columna VENTA_TOTAL');
+    if(iDesc<0)    throw new Error('No se encontró columna DESCRIPCION');
+    if(iCantidad<0)throw new Error('No se encontró columna CANTIDAD');
+    if(iVentaTotal<0)throw new Error('No se encontró columna VENTA_TOTAL');
 
     // ── Parsear productos ──
     prodDatos=[];
     for(let r=headerRow+1;r<raw.length;r++){
       const row=raw[r];
-      if(!row||row.every(c=>c===null||c===''||c===undefined))continue;
-      // Detectar fila de totales (CLAVE vacía y DESCRIPCION vacía o dice "TOTAL")
-      const claveVal=iClave>=0?row[iClave]:null;
-      const descVal=String(row[iDesc]||'').trim();
-      if(!descVal)continue;
-      if(descVal.toUpperCase().includes('TOTAL')&&(!claveVal||claveVal===null))continue;
-      const cantidad=Number(String(row[iCantidad]||'0').replace(/[^0-9.-]/g,''))||0;
+      const desc=limpiar(row[iDesc]);
+      if(!desc)continue;
+      if(desc.toUpperCase().includes('TOTAL')&&(iClave<0||!row[iClave]))continue;
+      const cantidad=parseFloat(String(row[iCantidad]||'0').replace(/[^0-9.-]/g,''))||0;
       if(cantidad<=0)continue;
-      const precio=Number(String(row[iPrecio>=0?iPrecio:0]||'0').replace(/[^0-9.-]/g,''))||0;
-      const ventaTotal=Number(String(row[iVentaTotal]||'0').replace(/[^0-9.-]/g,''))||0;
-      const grupo=iGrupo>=0?String(row[iGrupo]||'Sin grupo').trim():'Sin grupo';
-      prodDatos.push({clave:claveVal,descripcion:descVal,grupo,precio,cantidad,ventaTotal});
+      const precio=parseFloat(String(row[iPrecio>=0?iPrecio:0]||'0').replace(/[^0-9.-]/g,''))||0;
+      const ventaTotal=parseFloat(String(row[iVentaTotal]||'0').replace(/[^0-9.-]/g,''))||0;
+      const grupo=iGrupo>=0?limpiar(row[iGrupo])||'Sin grupo':'Sin grupo';
+      const clave=iClave>=0?limpiar(row[iClave]):'';
+      prodDatos.push({clave,descripcion:desc,grupo,precio,cantidad,ventaTotal});
     }
     if(!prodDatos.length)throw new Error('No se encontraron productos con cantidad mayor a 0');
     prodResetZona();prodRenderTodo();
