@@ -711,13 +711,16 @@ tbody tr{animation:fadeIn .2s ease;}
       <!-- Métricas resumen -->
       <div class="resumen-card" style="margin-bottom:1.25rem">
         <div style="padding:1rem 1.25rem .75rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-          <div>
-            <div style="font-family:'DM Serif Display',serif;font-size:17px;font-weight:400" id="prod-titulo-archivo">—</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:2px" id="prod-subtitulo-archivo">—</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button onclick="prodVolverInicio()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);cursor:pointer">← Volver</button>
+            <div>
+              <div style="font-family:'DM Serif Display',serif;font-size:17px;font-weight:400" id="prod-titulo-archivo">—</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:2px" id="prod-subtitulo-archivo">—</div>
+            </div>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn-corregir" style="color:var(--accent);border-color:var(--accent)" onclick="prodExportarExcel()">⬇ Exportar Excel</button>
-            <button class="btn-corregir" onclick="prodReset()">📂 Cargar otro archivo</button>
+            <button class="btn-corregir" onclick="prodReset()">📂 Cargar otro</button>
           </div>
         </div>
         <!-- Guardar en Sheets -->
@@ -735,10 +738,11 @@ tbody tr{animation:fadeIn .2s ease;}
           <div class="resumen-grid">
             <div class="rmetric dest"><div class="rl">Total vendido</div><div class="rv green" id="prod-m-total">—</div></div>
             <div class="rmetric dest"><div class="rl">Piezas vendidas</div><div class="rv" id="prod-m-piezas">—</div></div>
-            <div class="rmetric"><div class="rl">Productos distintos</div><div class="rv" id="prod-m-productos">—</div></div>
-            <div class="rmetric"><div class="rl">Grupos / categorías</div><div class="rv" id="prod-m-grupos">—</div></div>
-            <div class="rmetric"><div class="rl">Ticket promedio</div><div class="rv" id="prod-m-ticket">—</div></div>
-            <div class="rmetric"><div class="rl">Producto estrella ⭐</div><div class="rv" id="prod-m-estrella" style="font-size:13px;line-height:1.3">—</div></div>
+          </div>
+          <!-- Los 5 más vendidos -->
+          <div style="margin-top:1rem">
+            <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:.75rem">⭐ Más vendidos del día</div>
+            <div id="prod-m-top5" style="display:flex;flex-direction:column;gap:8px"></div>
           </div>
         </div>
       </div>
@@ -2291,10 +2295,35 @@ function prodRenderTodo(){
   const ticket=totalPiezas>0?totalVenta/totalPiezas:0;
   document.getElementById('prod-m-total').textContent=fmt(totalVenta);
   document.getElementById('prod-m-piezas').textContent=totalPiezas.toLocaleString('es-MX');
-  document.getElementById('prod-m-productos').textContent=prodDatos.length;
-  document.getElementById('prod-m-grupos').textContent=grupos.length;
-  document.getElementById('prod-m-ticket').textContent=fmt(ticket);
-  document.getElementById('prod-m-estrella').textContent=estrella?estrella.descripcion:'—';
+
+  // ── 5 más vendidos por categoría ─────────────────────────
+  const inc=(d,w)=>d.toLowerCase().includes(w.toLowerCase());
+  const topDe=(filtro,label,color,icono)=>{
+    const lista=prodDatos.filter(filtro).sort((a,b)=>b.cantidad-a.cantidad);
+    const top=lista[0];
+    return{label,color,icono,nombre:top?top.descripcion:'Sin datos',cantidad:top?top.cantidad:0};
+  };
+  const top5=[
+    topDe(p=>true,                                                         'General',      '#1A6B4A','⭐'),
+    topDe(p=>inc(p.descripcion,'mac')&&!inc(p.descripcion,'rappi'),        'Pan Mac',       '#1B4F8A','🍞'),
+    topDe(p=>inc(p.descripcion,'combinada'),                               'Combinada',     '#8B5E3C','🥙'),
+    topDe(p=>inc(p.descripcion,'rappi')||inc(p.grupo,'rappi'),             'Rappi',         '#C0392B','🛵'),
+    topDe(p=>['refresco embotellado','bebidas'].some(g=>inc(p.grupo,g))||
+             ['coca','agua','lechita','jamaica','refresco'].some(w=>inc(p.descripcion,w)),
+             'Bebidas','#2E86AB','🥤'),
+  ];
+  const top5El=document.getElementById('prod-m-top5');
+  if(top5El){
+    top5El.innerHTML=top5.map(t=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg);border-radius:8px;border-left:3px solid ${t.color}">
+        <span style="font-size:18px;flex-shrink:0">${t.icono}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">${t.label}</div>
+          <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${t.color}">${t.nombre}</div>
+        </div>
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;color:${t.color};flex-shrink:0">${t.cantidad}<span style="font-size:11px;font-weight:400;color:var(--muted)"> pzas</span></div>
+      </div>`).join('');
+  }
   const selGrupo=document.getElementById('prod-filtro-grupo');
   const valGrupo=selGrupo.value;
   selGrupo.innerHTML='<option value="">Todos los grupos</option>'+grupos.sort().map(g=>`<option value="${g}">${g}</option>`).join('');
