@@ -70,6 +70,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .nav-back:hover{color:var(--accent);}
 
 .layout{max-width:980px;margin:0 auto;padding:2rem 1.5rem;display:grid;grid-template-columns:260px 1fr;gap:1.25rem;align-items:start;}
+
+/* ── Vertical (móvil) ── */
 @media(max-width:700px){
   .layout{grid-template-columns:1fr;padding:.75rem;gap:.75rem;}
   .mod-header{padding:.75rem 1rem;}
@@ -83,6 +85,33 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   .rv{font-size:17px;}
   .ganancia-val{font-size:28px;}
   header h1{font-size:18px;}
+}
+
+/* ── Horizontal móvil (landscape) ── */
+@media(max-height:500px) and (orientation:landscape){
+  .layout{grid-template-columns:240px 1fr;padding:.5rem .75rem;gap:.75rem;}
+  .mod-header{padding:.5rem 1rem;}
+  .mod-header h1{font-size:18px;}
+  .pin-card,.menu-card{padding:1rem;max-width:420px;}
+  .pin-dots{margin-bottom:.75rem;}
+  .pin-teclado{gap:6px;margin-bottom:.5rem;}
+  .pin-btn{padding:9px;}
+  .menu-btn{padding:10px;font-size:16px;}
+  .resumen-grid{grid-template-columns:1fr 1fr 1fr;gap:6px;}
+  .rmetric{padding:.5rem .6rem;}
+  .rv{font-size:15px;}
+  .ganancia-val{font-size:24px;}
+  .resumen-body{padding:.75rem;}
+  .field{margin-bottom:.6rem;}
+  .field input,.field select{padding:7px 10px;font-size:14px;}
+  #vw-nav{padding:.5rem 0;}
+  .btn-primary{padding:9px;}
+  /* Wizard en landscape: formulario + preview lado a lado */
+  #ventas-screen > div:nth-child(3){max-width:600px;}
+  /* Menú en landscape: grid 2 columnas */
+  .menu-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  /* Productos: dos columnas en inicio */
+  #prod-inicio > div:first-child{grid-template-columns:1fr 1fr;}
 }
 
 /* ── Wizard ventas ── */
@@ -391,10 +420,16 @@ tbody tr{animation:fadeIn .2s ease;}
           <img id="vw-foto-img" style="max-width:100%;max-height:220px;border-radius:10px;object-fit:contain" src="" alt="Foto"/>
           <div style="margin-top:8px"><button class="btn-corregir" onclick="vwQuitarFoto()" style="color:var(--danger);border-color:var(--danger)">✕ Quitar foto</button></div>
         </div>
-        <div id="vw-foto-btn-wrap" style="text-align:center;margin-bottom:1rem">
-          <div style="display:flex;flex-direction:column;gap:10px;align-items:center">
-            <label for="vw-foto-camara" class="btn-primary" style="display:inline-block;width:auto;padding:11px 28px;cursor:pointer">📷 Tomar foto o elegir de galería</label>
-            <input type="file" id="vw-foto-camara" accept="image/*" style="display:none" onchange="vwSeleccionarFoto(event)"/>
+        <div id="vw-foto-btn-wrap" style="margin-bottom:1rem">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <label for="vw-foto-camara-cam" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;background:var(--accent);color:#fff;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;text-align:center">
+              📷 Cámara
+            </label>
+            <input type="file" id="vw-foto-camara-cam" accept="image/*" capture="environment" style="display:none" onchange="vwSeleccionarFoto(event)"/>
+            <label for="vw-foto-camara-gal" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;background:var(--surface);color:var(--accent);border:1.5px solid var(--accent);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;text-align:center">
+              🖼️ Galería
+            </label>
+            <input type="file" id="vw-foto-camara-gal" accept="image/*" style="display:none" onchange="vwSeleccionarFoto(event)"/>
           </div>
         </div>
         <div class="status" id="vw-status5"></div>
@@ -1234,7 +1269,8 @@ function vwQuitarFoto(){
   vwFotoData=null;
   document.getElementById('vw-foto-preview').style.display='none';
   document.getElementById('vw-foto-btn-wrap').style.display='block';
-  document.getElementById('vw-foto-camara').value='';
+  const c=document.getElementById('vw-foto-camara-cam');if(c)c.value='';
+  const g=document.getElementById('vw-foto-camara-gal');if(g)g.value='';
   document.getElementById('vw-foto-img').src='';
 }
 
