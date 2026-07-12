@@ -756,6 +756,7 @@ tbody tr{animation:fadeIn .2s ease;}
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn-corregir" style="color:var(--accent);border-color:var(--accent)" onclick="prodExportarExcel()">⬇ Exportar Excel</button>
             <button class="btn-corregir" onclick="prodReset()">📂 Cargar otro</button>
+            <button class="btn-corregir" style="color:#8B5E3C;border-color:#8B5E3C" onclick="prodAbrirInsumos('dia')">🥩 Calcular insumos</button>
           </div>
         </div>
         <!-- Guardar en Sheets -->
@@ -2122,6 +2123,7 @@ async function prodRenderPeriodo(){
     const resultados=await Promise.all(promesas);
     const todos=[];
     resultados.forEach(d=>{if(d.ok)todos.push(...d.productos);});
+    _insumosProductosPeriodo=todos; // ← guardar para botón de insumos
 
     if(!todos.length){res.innerHTML='<div style="text-align:center;padding:2rem;color:var(--muted)">Sin datos</div>';return;}
 
@@ -2143,6 +2145,7 @@ async function prodRenderPeriodo(){
         <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase">Días</div><div style="font-weight:600;font-size:13px">${fechasEnRango.length}</div></div>
         <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase">Total vendido</div><div style="font-weight:700;font-size:16px;color:var(--accent)">$${Math.round(totalVenta).toLocaleString('es-MX')}</div></div>
         <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase">Piezas</div><div style="font-weight:700;font-size:16px">${totalPiezas.toLocaleString('es-MX')}</div></div>
+        <button onclick="prodAbrirInsumos('periodo')" style="margin-left:auto;padding:7px 14px;background:#8B5E3C;color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap">🥩 Calcular insumos</button>
       </div>
       <div class="table-wrap">
         <table>
@@ -2717,6 +2720,122 @@ async function prodExportarExcel(){
   }catch(e){alert('Error al exportar: '+e.message);}
 }
 
+// ══════════════ CÁLCULO DE INSUMOS ═══════════════════════════
+
+// ── Tabla de insumos: cada entrada define cómo detectar el producto
+// y cuántas piezas del insumo consume
+const INSUMOS_RECETAS = [
+  {
+    insumo: 'Chorizo',
+    color:  '#C0392B',
+    icono:  '🌭',
+    reglas: [
+      // descripción contiene "chorizo" en todos los casos
+      // orden importa: primero los más específicos
+      {
+        desc:    'Tradicional sencilla',
+        match:   d => inc(d,'chorizo') && inc(d,'tradicional') && !inc(d,'combinada') && !inc(d,'mac'),
+        piezas:  1
+      },
+      {
+        desc:    'Tradicional combinada',
+        match:   d => inc(d,'chorizo') && inc(d,'tradicional') && inc(d,'combinada') && !inc(d,'mac'),
+        piezas:  0.75
+      },
+      {
+        desc:    'Mac sencilla',
+        match:   d => inc(d,'chorizo') && inc(d,'mac') && !inc(d,'combinada'),
+        piezas:  1.5
+      },
+      {
+        desc:    'Mac combinada',
+        match:   d => inc(d,'chorizo') && inc(d,'mac') && inc(d,'combinada'),
+        piezas:  1
+      },
+    ]
+  }
+  // Aquí se agregarán más insumos: pierna, milanesa, etc.
+];
+
+const inc = (d, w) => d.toLowerCase().includes(w.toLowerCase());
+
+function prodCalcularInsumos(productos){
+  // Para cada insumo, aplica sus reglas sobre la lista de productos
+  return INSUMOS_RECETAS.map(ins => {
+    const desglose = [];
+    let totalPiezas = 0;
+
+    ins.reglas.forEach(regla => {
+      const matches = productos.filter(p => regla.match(p.descripcion));
+      const cantProductos = matches.reduce((a, p) => a + p.cantidad, 0);
+      if(cantProductos > 0){
+        const piezasUsadas = +(cantProductos * regla.piezas).toFixed(4);
+        totalPiezas += piezasUsadas;
+        desglose.push({
+          desc:          regla.desc,
+          cantProductos,
+          piezasPorUnd:  regla.piezas,
+          piezasUsadas
+        });
+      }
+    });
+
+    return { ...ins, totalPiezas: +totalPiezas.toFixed(2), desglose };
+  }).filter(ins => ins.totalPiezas > 0); // solo mostrar insumos con consumo
+}
+
+// Fuente de datos según el contexto (dia o periodo)
+let _insumosProductosDia    = []; // se llena al cargar reporte del día
+let _insumosProductosPeriodo= []; // se llena al calcular período
+
+function prodAbrirInsumos(contexto){
+  const productos = contexto === 'dia' ? prodDatos : _insumosProductosPeriodo;
+  if(!productos.length){ alert('No hay productos cargados.'); return; }
+
+  const resultado = prodCalcularInsumos(productos);
+
+  // Etiqueta de período
+  let periodoLabel = '';
+  if(contexto === 'dia'){
+    periodoLabel = document.getElementById('prod-titulo-archivo')?.textContent || 'Reporte del día';
+  } else {
+    const desde = document.getElementById('prod-periodo-desde')?.value;
+    const hasta = document.getElementById('prod-periodo-hasta')?.value;
+    periodoLabel = document.getElementById('plabel-a')?.textContent ||
+      (desde && hasta ? labelFecha(desde)+' — '+labelFecha(hasta) : 'Período seleccionado');
+  }
+  document.getElementById('modal-insumos-periodo').textContent = periodoLabel;
+
+  const contenido = document.getElementById('modal-insumos-contenido');
+  if(!resultado.length){
+    contenido.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:13px">No se detectaron insumos en los productos vendidos</div>';
+  } else {
+    contenido.innerHTML = resultado.map(ins => `
+      <div style="margin-bottom:1.25rem;padding:1rem;background:var(--bg);border-radius:10px;border-left:4px solid ${ins.color}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:20px">${ins.icono}</span>
+            <span style="font-weight:700;font-size:16px">${ins.insumo}</span>
+          </div>
+          <div style="text-align:right">
+            <div style="font-family:'DM Serif Display',serif;font-size:24px;color:${ins.color};line-height:1">${ins.totalPiezas}</div>
+            <div style="font-size:11px;color:var(--muted)">piezas totales</div>
+          </div>
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:.6rem;display:flex;flex-direction:column;gap:5px">
+          ${ins.desglose.map(d => `
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px">
+              <span style="color:var(--muted)">${d.desc}</span>
+              <span style="color:var(--muted);font-size:12px">${d.cantProductos} × ${d.piezasPorUnd}</span>
+              <span style="font-weight:600;color:${ins.color}">${d.piezasUsadas} pzas</span>
+            </div>`).join('')}
+        </div>
+      </div>`).join('');
+  }
+
+  document.getElementById('modal-insumos').classList.add('visible');
+}
+
 // ── Init ──────────────────────────────────────────────────
 document.querySelectorAll('.screen').forEach(s=>s.classList.remove('activo'));
 document.getElementById('login-screen').classList.add('activo');
@@ -2733,6 +2852,18 @@ window.onload=function(){
   }
 };
 </script>
+
+<!-- ══ MODAL INSUMOS ══ -->
+<div class="modal-overlay" id="modal-insumos">
+  <div class="modal" style="max-width:480px;width:94vw;max-height:85vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <h3 style="font-family:'DM Serif Display',serif;font-size:19px;font-weight:400;margin:0">🥩 Consumo de insumos</h3>
+      <button onclick="cerrarModal('modal-insumos')" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+    </div>
+    <div id="modal-insumos-periodo" style="font-size:12px;color:var(--muted);margin-bottom:1rem;padding:6px 10px;background:var(--bg);border-radius:6px"></div>
+    <div id="modal-insumos-contenido"></div>
+  </div>
+</div>
 
 <script>
 if('serviceWorker' in navigator){
